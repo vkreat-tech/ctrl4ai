@@ -13,13 +13,13 @@ if os.path.isfile(requirementPath):
 
 setuptools.setup(
     name="ctrl4ai",
-    version="0.0.3",
+    version="0.0.5",
     author="Shaji James",
     author_email="shajijames7@gmail.com",
     description="A helper package for Machine Learning and Deep Learning Algorithms",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/shajijames/ctrl4ai",
+    url="https://github.com/vkreat-tech/ctrl4ai",
     include_package_data=True,
     packages=setuptools.find_packages(),
     package_data={

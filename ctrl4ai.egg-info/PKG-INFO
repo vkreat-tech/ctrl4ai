@@ -1,8 +1,8 @@
 Metadata-Version: 2.1
 Name: ctrl4ai
-Version: 0.0.3
+Version: 0.0.5
 Summary: A helper package for Machine Learning and Deep Learning Algorithms
-Home-page: https://github.com/shajijames/ctrl4ai
+Home-page: https://github.com/vkreat-tech/ctrl4ai
 Author: Shaji James
 Author-email: shajijames7@gmail.com
 License: UNKNOWN
@@ -10,7 +10,7 @@ Description: # Ctrl4AI
         
         This is a helper package for Machine Learning and Deep Learning solutions.
         
-        For demo on usage, please check [README.ipynb](https://github.com/shajijames/ctrl4ai/blob/master/README.ipynb)
+        For demo on usage, please check [README.ipynb](https://github.com/vkreat-tech/ctrl4ai/blob/master/README.ipynb)
         
         #### Contact Developers: [Shaji](https://www.linkedin.com/in/shaji-james/), [Charu](https://www.linkedin.com/in/charunethragiri/), [Selva](https://www.linkedin.com/in/selva-prasanth-274b66166/)
         
@@ -33,6 +33,10 @@ Description: # Ctrl4AI
         The easiest way to install the latest release version of Ctrl4AI is via ```pip```:
         ```bash
         pip install ctrl4ai
+        ```
+        In case you get ```ERROR: Could not install packages due to an EnvironmentError```, try using
+        ```bash
+        pip install ctrl4ai --user
         ```
         Check for the latest available version in [Ctrl4AI](https://pypi.org/project/ctrl4ai/)
         
