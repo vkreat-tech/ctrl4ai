@@ -93,7 +93,6 @@ def get_ohe_df(dataset,target_variable=None,ignore_cols=[],categorical_threshold
   return dataset
 
 
-
 def drop_non_numeric(dataset):
   """
   Usage: [arg1]:[pandas dataframe]

@@ -1,6 +1,7 @@
 README.md
 setup.py
 ctrl4ai/__init__.py
+ctrl4ai/automl.py
 ctrl4ai/datasets.py
 ctrl4ai/helper.py
 ctrl4ai/preprocessing.py
