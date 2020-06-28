@@ -12,6 +12,7 @@ from sklearn.impute import KNNImputer
 
 
 from . import helper
+from . import exceptions
 
 
 def get_distance(dataset,start_latitude,start_longitude,end_latitude,end_longitude):
@@ -140,7 +141,7 @@ def impute_nulls(dataset,method='central_tendency'):
     return dataset
   else:
     print('Method should be either central_tendency or knn')
-    raise helper.ParameterError
+    raise exceptions.ParameterError
     
     
 def label_encode(dataset,col):
@@ -168,3 +169,36 @@ def get_correlated_features(dataset,target_variable):
       selected_features.append(col)
   print("Selected Features - "+','.join(selected_features))
   return selected_features
+
+
+def remove_outlier_df(dataset,cols):
+  """
+  Usage: [arg1]:[pandas dataframe],[arg2]:[list of columns to check and remove outliers]
+  Description: The column needs to be continuous
+  Returns: DataFrame with outliers removed for the specific columns
+  """
+  for col in cols:
+    outlier_temp_dataset=pd.DataFrame(dataset[col])
+    outlier_temp_dataset=impute_nulls(outlier_temp_dataset)
+    Q1 = outlier_temp_dataset.quantile(0.25)
+    Q3 = outlier_temp_dataset.quantile(0.75)
+    IQR = Q3 - Q1
+    outlier_bool_dataset=((outlier_temp_dataset > (Q1 - 1.5 * IQR)) & (outlier_temp_dataset < (Q3 + 1.5 * IQR)))
+    select_index=outlier_bool_dataset.index[outlier_bool_dataset[col] == True]
+    print('No. of outlier rows removed based on '+col+' is '+str(outlier_temp_dataset.shape[0]-len(select_index)))
+    dataset=dataset.iloc[select_index].reset_index(drop=True)
+  return dataset
+
+
+def auto_remove_outliers(dataset,ignore_cols=[],categorical_threshold=0.3):
+  """
+  Usage: [arg1]:[pandas dataframe],[ignore_cols]:[list of columns to be ignored],[categorical_threshold(default=0.3)]:[Threshold for determing categorical column based on the percentage of unique values(optional)]
+  Description: Checks if the column is continuous and removes outliers
+  Returns: DataFrame with outliers removed
+  """
+  continuous_columns=[]
+  for col in dataset.columns:
+    if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold)==False and helper.check_numeric_col(dataset[col])==True:
+      continuous_columns.append(col)
+  dataset=remove_outlier_df(dataset,continuous_columns)
+  return dataset

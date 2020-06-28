@@ -7,6 +7,8 @@ Created on Fri Jun 26 13:41:40 2020
 
 import pandas as pd
 
+from . import helper
+
 def titanic():
   """
   Type: Supervised - Classification
@@ -15,7 +17,7 @@ def titanic():
   Description: Sample Dataset
   Returns: Pandas DataFrame
   """
-  dataset=pd.read_csv("/usr/local/lib/python3.6/dist-packages/ctrl4ai/titanic.csv.gz",compression='gzip')
+  dataset=pd.read_csv(helper.__file__[:-len('helper')-3]+"sample_datasets/titanic.csv.gz",compression='gzip')
   return dataset
 
 def trip_fare():
@@ -26,6 +28,6 @@ def trip_fare():
   Description: Sample Dataset
   Returns: Pandas DataFrame
   """
-  dataset = pd.read_csv("/usr/local/lib/python3.6/dist-packages/ctrl4ai/trip_fare.csv.gz",compression='gzip',parse_dates=['pickup_datetime','dropoff_datetime'])
+  dataset = pd.read_csv(helper.__file__[:-len('helper')-3]+"sample_datasets/trip_fare.csv.gz",compression='gzip',parse_dates=['pickup_datetime','dropoff_datetime'])
   return dataset
 

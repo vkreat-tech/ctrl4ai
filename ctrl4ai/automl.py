@@ -5,8 +5,9 @@ Created on Sat Jun 27 19:00:36 2020
 @author: ShajiJamesSelvakumar
 """
 
-from ctrl4ai import preprocessing
-from ctrl4ai import helper
+from . import preprocessing
+from . import helper
+from . import exceptions
 
 def preprocess(dataset,
                learning_type,
@@ -25,8 +26,7 @@ def preprocess(dataset,
                ):
     if str.lower(learning_type)=='supervised' and target_variable==None:
         print('target_variable is a required parameter for supervised learning')
-        raise helper.ParameterError
+        raise exceptions.ParameterError
     if derive_from_datetime:
         dataset=preprocessing.derive_from_datetime(dataset)
     return dataset
-
