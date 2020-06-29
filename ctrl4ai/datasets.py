@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jun 26 13:41:40 2020
+Created on Tue May 12 19:41:40 2020
 
-@author: ShajiJamesSelvakumar
+@author: Shaji,Charu,Selva
 """
 
 import pandas as pd
+pd.set_option('mode.chained_assignment', None)
 
 from . import helper
 
@@ -18,7 +19,9 @@ def titanic():
   Returns: Pandas DataFrame
   """
   dataset=pd.read_csv(helper.__file__[:-len('helper')-3]+"sample_datasets/titanic.csv.gz",compression='gzip')
+  dataset=dataset.drop(['Unnamed: 0'],axis=1)
   return dataset
+
 
 def trip_fare():
   """
@@ -29,5 +32,6 @@ def trip_fare():
   Returns: Pandas DataFrame
   """
   dataset = pd.read_csv(helper.__file__[:-len('helper')-3]+"sample_datasets/trip_fare.csv.gz",compression='gzip',parse_dates=['pickup_datetime','dropoff_datetime'])
+  dataset=dataset.drop(['Unnamed: 0'],axis=1)
   return dataset
 

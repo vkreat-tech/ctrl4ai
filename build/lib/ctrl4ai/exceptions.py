@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Jun 27 23:43:31 2020
+Created on Tue May 12 23:43:31 2020
 
-@author: ShajiJamesSelvakumar
+@author: Shaji,Charu,Selva
 """
 
 class ParameterError(Exception):
@@ -11,3 +11,4 @@ class ParameterError(Exception):
   Thrown because the argumrnt is incorrect
   """
   pass
+

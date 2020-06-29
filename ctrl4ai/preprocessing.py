@@ -1,21 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jun 23 17:54:12 2020
+Created on Tue May 12 17:54:12 2020
 
-@author: ShajiJamesSelvakumar
+@author: Shaji,Charu,Selva
 """
 
 import scipy
 import numpy as np
 import pandas as pd
 from sklearn.impute import KNNImputer
+pd.set_option('mode.chained_assignment', None)
 
 
 from . import helper
 from . import exceptions
 
 
-def get_distance(dataset,start_latitude,start_longitude,end_latitude,end_longitude):
+def get_distance(dataset,
+                 start_latitude,
+                 start_longitude,
+                 end_latitude,
+                 end_longitude):
   """
   Usage: [arg1]:[Pandas DataFrame],[arg2]:[column-start_latitude],[arg3]:[column-start_longitude],[arg4]:[column-end_latitude],[arg5]:[column-end_longitude]
   Returns: DataFrame with additional column [Distance in kilometers]
@@ -24,7 +29,9 @@ def get_distance(dataset,start_latitude,start_longitude,end_latitude,end_longitu
   return dataset
 
 
-def get_timediff(dataset,start_time,end_time):
+def get_timediff(dataset,
+                 start_time,
+                 end_time):
   """
   Usage: [arg1]:[Pandas DataFrame],[arg2]:[column-start_time],[arg3]:[column-end_time]
   Returns: DataFrame with additional column [Duration in seconds]
@@ -49,7 +56,8 @@ def derive_from_datetime(dataset):
   return dataset
 
 
-def drop_null_fields(dataset,dropna_threshold=0.7):
+def drop_null_fields(dataset,
+                     dropna_threshold=0.7):
   """
   Usage: [arg1]:[pandas dataframe],[dropna_threshold(default=0.7)]:[What percentage of nulls should account for the column top be removed]
   Description: Drop columns that has more null values
@@ -75,15 +83,19 @@ def drop_single_valued_cols(dataset):
   for col in dataset.columns:
     if helper.single_valued_col(dataset[col]):
       single_valued_cols.append(col)
-  print('Dropping '+','.join(single_valued_cols))
+  if len(single_valued_cols)>0:
+    print('Dropping '+','.join(single_valued_cols))
   if len(single_valued_cols)>0:
     dataset=dataset.drop(single_valued_cols,axis=1)
   return dataset
 
 
-def get_ohe_df(dataset,target_variable=None,ignore_cols=[],categorical_threshold=0.3):
+def get_ohe_df(dataset,
+               target_variable=None,
+               ignore_cols=[],
+               categorical_threshold=0.3):
   """
-  Usage: [arg1]:[pandas dataframe],[target_variable(default=None)]:[Dependent variablr for Regression/Classification],[ignore_cols]:[categorical columns where one hot encoding need not be done],[categorical_threshold(default=0.3)]:[Threshold for determing categorical column based on the percentage of unique values(optional)]
+  Usage: [arg1]:[pandas dataframe],[target_variable(default=None)]:[Dependent variable for Regression/Classification],[ignore_cols]:[categorical columns where one hot encoding need not be done],[categorical_threshold(default=0.3)]:[Threshold for determing categorical column based on the percentage of unique values(optional)]
   Description: Auto identifies categorical features in the dataframe and does one hot encoding
   Note: Consumes more system mermory if the size of the dataset is huge
   Returns: Dataframe [with separate column for each categorical values]
@@ -104,13 +116,15 @@ def drop_non_numeric(dataset):
   for col in dataset.columns:
     if helper.check_numeric_col(dataset[col])==False:
       drop_cols.append(col)
-  print("Dropping "+','.join(drop_cols))
+  if len(drop_cols)>0:
+    print("Dropping "+','.join(drop_cols))
   if len(drop_cols)>0:
     dataset=dataset.drop(drop_cols,axis=1)
   return dataset
 
 
-def impute_nulls(dataset,method='central_tendency'):
+def impute_nulls(dataset,
+                 method='central_tendency'):
   """
   Usage: [arg1]:[pandas dataframe],[method(default=central_tendency)]:[Choose either central_tendency or KNN]
   Description: Auto identifies the type of distribution in the column and imputes null values
@@ -128,50 +142,43 @@ def impute_nulls(dataset,method='central_tendency'):
   elif method=='central_tendency':
     for col,value in dataset.isnull().sum().items():
       if value>0:
-        if helper.check_numeric_col(dataset[col]):
+        if helper.check_categorical_col(dataset[col]):
+          print("Replaced nulls in "+col+" with mode")
+          mode_val=dataset[col].mode()[0]
+          dataset[col]=dataset[col].fillna(mode_val)
+        elif helper.check_numeric_col(dataset[col]):
           if scipy.stats.skew(dataset[col])>1:
             print("Replaced nulls in "+col+" with median")
-            dataset[col]=dataset[col].fillna(dataset[col].median())
+            median_val=dataset[col].median()
+            dataset[col]=dataset[col].fillna(median_val)
           else:
             print("Replaced nulls in "+col+" with mean")
-            dataset[col]=dataset[col].fillna(dataset[col].mean())
-        elif helper.check_categorical_col(dataset[col]):
-          print("Replaced nulls in "+col+" with mode")
-          dataset[col]=dataset[col].fillna(dataset[col].mode()[0])
+            mean_val=dataset[col].mean()
+            dataset[col]=dataset[col].fillna(mean_val)
     return dataset
   else:
     print('Method should be either central_tendency or knn')
     raise exceptions.ParameterError
     
     
-def label_encode(dataset,col):
+def label_encode(dataset,
+                 col):
   """
   Usage: [arg1]:[pandas dataframe],[arg1]:[column to be encoded]
   Description: Labelling categorical features with numbers from 0 to n categories
   Returns: Label Dict , Dataframe
   """
-  dataset[col]=dataset[col].fillna(dataset[col].mode()[0])
+  mode_val=dataset[col].mode()[0]
+  dataset[col]=dataset[col].apply(lambda x:str(x).strip()).astype(str).fillna(mode_val)
   label_dict=dict(zip(dataset[col].unique(),np.arange(dataset[col].unique().shape[0])))
   dataset=dataset.replace({col:label_dict})
   dataset[col]=dataset[col].astype('int')
   dataset[col]=dataset[col].astype('category')
   return label_dict,dataset
 
-def get_correlated_features(dataset,target_variable):
-  """
-  Usage: [arg1]:[pandas dataframe],[arg2]:[target/dependent variable]
-  Description: Only for supervised learning to select independent variables that has some correlation with target/dependent variable
-  Returns: List of columns that have considerable correlation
-  """
-  selected_features=[]
-  for col,coeff in dataset.corr()[target_variable].items():
-    if coeff>np.abs(2/np.sqrt(dataset.shape[0])):
-      selected_features.append(col)
-  print("Selected Features - "+','.join(selected_features))
-  return selected_features
 
-
-def remove_outlier_df(dataset,cols):
+def remove_outlier_df(dataset,
+                      cols):
   """
   Usage: [arg1]:[pandas dataframe],[arg2]:[list of columns to check and remove outliers]
   Description: The column needs to be continuous
@@ -190,7 +197,9 @@ def remove_outlier_df(dataset,cols):
   return dataset
 
 
-def auto_remove_outliers(dataset,ignore_cols=[],categorical_threshold=0.3):
+def auto_remove_outliers(dataset,
+                         ignore_cols=[],
+                         categorical_threshold=0.3):
   """
   Usage: [arg1]:[pandas dataframe],[ignore_cols]:[list of columns to be ignored],[categorical_threshold(default=0.3)]:[Threshold for determing categorical column based on the percentage of unique values(optional)]
   Description: Checks if the column is continuous and removes outliers
@@ -202,3 +211,83 @@ def auto_remove_outliers(dataset,ignore_cols=[],categorical_threshold=0.3):
       continuous_columns.append(col)
   dataset=remove_outlier_df(dataset,continuous_columns)
   return dataset
+
+
+def get_label_encoded_df(dataset,
+                         categorical_threshold=0.3):
+  """
+  Usage: [arg1]:[pandas dataframe],[target_variable(default=None)]:[Dependent variablr for Regression/Classification],[categorical_threshold(default=0.3)]:[Threshold for determing categorical column based on the percentage of unique values(optional)]
+  Description: Auto identifies categorical features in the dataframe and does label encoding
+  Returns: Dataframe [with separate column for each categorical values]
+  """
+  column_labels=dict()
+  for col in dataset.columns:
+    if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold):
+      labels,dataset=label_encode(dataset,col)
+      print('Labels for '+col+': '+str(labels))
+      column_labels[col]=labels
+  return column_labels,dataset
+
+
+def cramersv_corr(x, y):
+  """
+  Usage: [arg1]:[independent categorical series],[arg2]:[dependent categorical series]
+  Description: Cramér's V is a measure of association between two nominal variables
+  Returns: A value between 0 and +1
+  """
+  confusion_matrix = pd.crosstab(x,y)
+  chi2 = scipy.stats.chi2_contingency(confusion_matrix)[0]
+  n = confusion_matrix.sum().sum()
+  phi2 = chi2/n
+  r,k = confusion_matrix.shape
+  phi2corr = max(0, phi2-((k-1)*(r-1))/(n-1))
+  rcorr = r-((r-1)**2)/(n-1)
+  kcorr = k-((k-1)**2)/(n-1)
+  return np.sqrt(phi2corr/min((kcorr-1),(rcorr-1)))
+
+def kendalltau_corr(x, y):
+  x_arr=np.array(impute_nulls(pd.DataFrame(x)))
+  y_arr=np.array(impute_nulls(pd.DataFrame(y)))
+  corr,_=scipy.stats.kendalltau(x_arr,y_arr)
+  return corr
+
+
+def get_correlated_features(dataset,
+                            target_col,
+                            target_type,
+                            categorical_threshold=0.3):
+  """
+  Usage: [arg1]:[pandas dataframe],[arg2]:[target/dependent variable],[arg3]:['continuous'/'categorical'],,[categorical_threshold(default=0.3)]:[Threshold for determing categorical column based on the percentage of unique values(optional)]
+  Description: Only for supervised learning to select independent variables that has some correlation with target/dependent variable (Uses Pearson correlation between two continuous variables, CramersV correlation between two categorical variables, Kendalls Tau correlation between a categorical and a continuos variable)
+  Returns: Dictionary of correlation coefficients, List of columns that have considerable correlation
+  """
+  categorical_cols=[]
+  continuous_cols=[]
+  col_corr=dict()
+  for col in dataset:
+    if col!=target_col:
+      if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold):
+        categorical_cols.append(col)
+      elif helper.check_numeric_col(dataset[col]):
+        continuous_cols.append(col)
+  if target_type=='continuous':
+    continuous_corr=dataset[continuous_cols+[target_col]].corr()
+    for col,coeff in continuous_corr[target_col].items():
+      col_corr[col]=coeff
+    for col in categorical_cols:
+      coeff=kendalltau_corr(dataset[col],dataset[target_col])
+      col_corr[col]=coeff
+  if target_type=='categorical':
+    for col in continuous_cols:
+      coeff=kendalltau_corr(dataset[col],dataset[target_col])
+      col_corr[col]=coeff
+    for col in categorical_cols:
+      coeff=cramersv_corr(dataset[col],dataset[target_col])
+      col_corr[col]=coeff
+  selected_features=[]
+  for col in col_corr.keys():
+    if float(col_corr[col])>np.abs(2/np.sqrt(dataset.shape[0])):
+      selected_features.append(col)
+  return col_corr,selected_features
+
+
