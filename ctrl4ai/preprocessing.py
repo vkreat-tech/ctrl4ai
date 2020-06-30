@@ -110,7 +110,7 @@ def get_ohe_df(dataset,
                ignore_cols=[],
                categorical_threshold=0.3):
   """
-  Usage: [arg1]:[pandas dataframe],[target_variable(default=None)]:[Dependent variable for Regression/Classification],[ignore_cols]:[categorical columns where one hot encoding need not be done],[categorical_threshold(default=0.3)]:[Threshold for determing categorical column based on the percentage of unique values(optional)]
+  Usage: [arg1]:[pandas dataframe],[target_variable(default=None)]:[Dependent variable for Regression/Classification],[ignore_cols]:[categorical columns where one hot encoding need not be done],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
   Description: Auto identifies categorical features in the dataframe and does one hot encoding
   Note: Consumes more system mermory if the size of the dataset is huge
   Returns: Dataframe [with separate column for each categorical values]
@@ -216,7 +216,7 @@ def auto_remove_outliers(dataset,
                          ignore_cols=[],
                          categorical_threshold=0.3):
   """
-  Usage: [arg1]:[pandas dataframe],[ignore_cols]:[list of columns to be ignored],[categorical_threshold(default=0.3)]:[Threshold for determing categorical column based on the percentage of unique values(optional)]
+  Usage: [arg1]:[pandas dataframe],[ignore_cols]:[list of columns to be ignored],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
   Description: Checks if the column is continuous and removes outliers
   Returns: DataFrame with outliers removed
   """
@@ -231,7 +231,7 @@ def auto_remove_outliers(dataset,
 def get_label_encoded_df(dataset,
                          categorical_threshold=0.3):
   """
-  Usage: [arg1]:[pandas dataframe],[target_variable(default=None)]:[Dependent variablr for Regression/Classification],[categorical_threshold(default=0.3)]:[Threshold for determing categorical column based on the percentage of unique values(optional)]
+  Usage: [arg1]:[pandas dataframe],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
   Description: Auto identifies categorical features in the dataframe and does label encoding
   Returns: Dataframe [with separate column for each categorical values]
   """
@@ -249,7 +249,7 @@ def get_label_encoded_df(dataset,
 def cramersv_corr(x, y):
   """
   Usage: [arg1]:[categorical series],[arg2]:[categorical series]
-  Description: Cramér's V is a measure of association between two categorical variables
+  Description: Cramer's V Correlation is a measure of association between two categorical variables
   Returns: A value between 0 and +1
   """
   confusion_matrix = pd.crosstab(x,y)
@@ -266,7 +266,7 @@ def cramersv_corr(x, y):
 def kendalltau_corr(x, y):
   """
   Usage: [arg1]:[continuous series],[arg2]:[categorical series]
-  Description: Cramér's V is a measure of association between a continuous variable and a categorical variable
+  Description: Kendall Tau Correlation is a measure of association between a continuous variable and a categorical variable
   Returns: A value between -1 and +1
   """
   x_arr=np.array(impute_nulls(pd.DataFrame(x)))
@@ -278,7 +278,7 @@ def kendalltau_corr(x, y):
 def pearson_corr(x, y):
   """
   Usage: [arg1]:[continuous series],[arg2]:[continuous series]
-  Description: Cramér's V is a measure of association between two continuous variables
+  Description: Pearson Correlation is a measure of association between two continuous variables
   Returns: A value between -1 and +1
   """
   x=pd.to_numeric(x)
@@ -291,7 +291,7 @@ def get_correlated_features(dataset,
                             target_type,
                             categorical_threshold=0.3):
   """
-  Usage: [arg1]:[pandas dataframe],[arg2]:[target/dependent variable],[arg3]:['continuous'/'categorical'],,[categorical_threshold(default=0.3)]:[Threshold for determing categorical column based on the percentage of unique values(optional)]
+  Usage: [arg1]:[pandas dataframe],[arg2]:[target/dependent variable],[arg3]:['continuous'/'categorical'],,[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
   Description: Only for supervised learning to select independent variables that has some correlation with target/dependent variable (Uses Pearson correlation between two continuous variables, CramersV correlation between two categorical variables, Kendalls Tau correlation between a categorical and a continuos variable)
   Returns: Dictionary of correlation coefficients, List of columns that have considerable correlation
   """

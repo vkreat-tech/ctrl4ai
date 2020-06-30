@@ -7,11 +7,11 @@ For demo on usage, please check [README.ipynb](https://github.com/vkreat-tech/ct
 #### Contact Developers: [Shaji](https://www.linkedin.com/in/shaji-james/), [Charu](https://www.linkedin.com/in/charunethragiri/), [Selva](https://www.linkedin.com/in/selva-prasanth-274b66166/)
 
 ## Highlights
-- Open Source Machine learning / Deep learning Package - focusing only on data preprocessing as of now.
-- Auto-Preprocessing package that can be leveraged at the level of abstraction or at the level of customization.
-- The flow of auto-preprocessing is handled in a way that it suits the intended type of learning.
-- Hypertuning parameters which allows user to clean data specific to any given model.
-- Computations for checking the type of data, distribution, correlation etc. are handled in the background.
+- Open Source Package with emphasis on data preprocessing so far.
+- Self intelligent methods that can be employed at the levels of abstraction or customization.
+- The flow of auto-preprocessing is orchestrated compatible to the learning type.
+- Parameter tuning allows users to transform the data precisely to their specifications.
+- Developed computations for inspecting the data to discover its type, distribution, correlation etc. which are handled in the background.
 
 ## Dependencies
 

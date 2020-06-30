@@ -38,7 +38,7 @@ def preprocess(dataset,
     target_type='continuous'/'categorical' (required for supervised learning type)
     impute_null_method='central_tendency' (optional) [Choose between 'central_tendency' and 'KNN']
     tranform_categorical='label_encoding' (optional) [Choose between 'label_encoding' and 'one_hot_encoding']
-    categorical_threshold=0.3 (optional) [Threshold for determing categorical column based on the percentage of unique values]
+    categorical_threshold=0.3 (optional) [Threshold for determining categorical column based on the percentage of unique values]
     remove_outliers=False (optional) [Choose between True and False]
     log_transform=None (optional) [Choose between 'yeojohnson'/'added_constant']
     drop_null_dominated=True (optional) [Choose between True and False - Optionally change threshold in dropna_threshold if True]
@@ -184,7 +184,7 @@ def master_correlation(dataset,
     """
     Usage:
     dataset=pandas DataFrame (required)
-    categorical_threshold=0.3 (optional) [Threshold for determing categorical column based on the percentage of unique values]
+    categorical_threshold=0.3 (optional) [Threshold for determining categorical column based on the percentage of unique values]
     define_continuous_cols=[] (optional) [List - Predefine continuous variables]
     define_categorical_cols=[] (optional) [List - Predefine categorical variables]
     |

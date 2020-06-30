@@ -38,7 +38,7 @@ def added_constant_log(dataset,
 def yeojohnsonlog(x):
   """
   Usage: [arg1]:[real/float value]
-  Description: Checks if the value is null (numpy.NaN)
+  Description: Log transforms the specified column based on Yeo Joshson Power Transform
   Returns: Log value (numeric)
   """
   if x<0:
@@ -93,7 +93,7 @@ def check_numeric_col(col_series):
 def check_categorical_col(col_series,
                           categorical_threshold=0.3):
   """
-  Usage: [arg1]:[Pandas Series / Single selected column of a dataframe],[categorical_threshold(default=0.3)]:[Threshold for determing categorical column based on the percentage of unique values(optional)]
+  Usage: [arg1]:[Pandas Series / Single selected column of a dataframe],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
   Description: Breaks the values to chunks and checks if the proportion of unique values is less than the threshold
   Returns: Boolean [True/False]
   """
