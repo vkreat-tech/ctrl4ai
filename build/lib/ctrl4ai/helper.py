@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue May 12 15:27:31 2020
+Created on Tue May 19 15:27:31 2020
 
 @author: Shaji,Charu,Selva
 """
@@ -18,6 +18,34 @@ def isNaN(num):
   Returns: Boolean [True/False]
   """
   return num != num
+
+
+def added_constant_log(dataset,
+                       col):
+  """
+  Usage: [arg1]:[dataset], [arg2]:[column in which log transform should be done]
+  Description: Log transforms the specified column
+  Returns: DataFrame
+  """
+  min_value=dataset[col].min()
+  if min_value<=0:
+    dataset[col]=dataset[col].apply(lambda x: np.log(x+np.abs(min_value)+1))
+  else:
+    dataset[col]=dataset[col].apply(lambda x: np.log(x))
+  return dataset
+
+
+def yeojohnsonlog(x):
+  """
+  Usage: [arg1]:[real/float value]
+  Description: Checks if the value is null (numpy.NaN)
+  Returns: Log value (numeric)
+  """
+  if x<0:
+    y=-np.log(-x+1)
+  else:
+    y=np.log(x+1)
+  return y
 
 
 def distance_calculator(start_latitude,

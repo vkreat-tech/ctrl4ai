@@ -9,11 +9,11 @@ thelibFolder = os.path.dirname(os.path.realpath(__file__))
 requirementPath = thelibFolder + '/requirements.txt'
 if os.path.isfile(requirementPath):
     with open(requirementPath) as f:
-        install_requires = f.read().splitlines() 
+        install_requires = f.read().splitlines()
 
 setuptools.setup(
     name="ctrl4ai",
-    version="0.0.15",
+    version="0.0.20",
     author="Shaji James",
     author_email="shajijames7@gmail.com",
     description="A helper package for Machine Learning and Deep Learning Algorithms",

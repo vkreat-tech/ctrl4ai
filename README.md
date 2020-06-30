@@ -7,12 +7,11 @@ For demo on usage, please check [README.ipynb](https://github.com/vkreat-tech/ct
 #### Contact Developers: [Shaji](https://www.linkedin.com/in/shaji-james/), [Charu](https://www.linkedin.com/in/charunethragiri/), [Selva](https://www.linkedin.com/in/selva-prasanth-274b66166/)
 
 ## Highlights
-  - Open Source Machine learning / Deep learning Package - focusing only on data preprocessing as of now.
-  - The package has lot of methods that can be used independently, but the major highlight of the package is a method with hyperparameters covering the entire flow of preprocessing.
-  - Users can simply experiment by running with default parameters which they can further tune by adjusting the parameters based on the requirements
-  - Methods are with proper description to make it friendly for the user
-  - Self-intelligent methods that understand the type of data, distribution etc. and compute accordingly
-  - Minimises the number of checks that user has to do for preprocessing
+- Open Source Machine learning / Deep learning Package - focusing only on data preprocessing as of now.
+- Auto-Preprocessing package that can be leveraged at the level of abstraction or at the level of customization.
+- The flow of auto-preprocessing is handled in a way that it suits the intended type of learning.
+- Hypertuning parameters which allows user to clean data specific to any given model.
+- Computations for checking the type of data, distribution, correlation etc. are handled in the background.
 
 ## Dependencies
 
@@ -38,12 +37,15 @@ Import any module from the package thru the following method:
 ```bash
 from ctrl4ai import preprocessing
 ```
+```bash
+from ctrl4ai import automl
+```
 
 ## Learn to use
 
 Understand what each functions does by using ```help()```:
 ```bash
-help(preprocessing.impute_nulls)
+help(automl.preprocess)
 ```
 
 ## ChangeLog
@@ -52,4 +54,6 @@ This is the first official release of the package
 
 ## ToDo
 
-  - Support reading multiple file formats like parquet, orc etc.
+- Model specific pre-processing
+- Baggining algoritmns
+- Text,Image,Audio,Video Analytics

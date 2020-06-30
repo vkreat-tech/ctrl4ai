@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue May 12 17:54:12 2020
+Created on Tue May 19 17:54:12 2020
 
 @author: Shaji,Charu,Selva
 """
@@ -56,6 +56,22 @@ def derive_from_datetime(dataset):
   return dataset
 
 
+def log_transform(dataset,method='yeojohnson',categorical_threshold=0.3):
+  """
+  Usage: [arg1]:[pandas dataframe],[method]=['yeojohnson'/'added_constant']
+  Description: Checks if the a continuous column is skewed and does log transformation
+  Returns: Dataframe [with all skewed columns normalized using appropriate approach]
+  """
+  for col in dataset.columns:
+    if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold)==False and helper.check_numeric_col(dataset[col]) and np.abs(scipy.stats.skew(dataset[col]))>1:
+      print('Log Normalization('+method+') applied for '+col)
+      if method=='yeojohnson':
+        dataset[col]=dataset[col].apply(lambda x: helper.yeojohnsonlog(x))
+      elif method=='added_constant':
+        dataset=helper.added_constant_log(dataset,col)
+  return dataset
+
+
 def drop_null_fields(dataset,
                      dropna_threshold=0.7):
   """
@@ -69,7 +85,7 @@ def drop_null_fields(dataset,
     if val/no_of_records<dropna_threshold:
       select_cols.append(index)
     else:
-      print('Dropping '+index)
+      print('Dropping null dominated column(s) '+index)
   return(dataset[select_cols])
   
 
@@ -84,8 +100,7 @@ def drop_single_valued_cols(dataset):
     if helper.single_valued_col(dataset[col]):
       single_valued_cols.append(col)
   if len(single_valued_cols)>0:
-    print('Dropping '+','.join(single_valued_cols))
-  if len(single_valued_cols)>0:
+    print('Dropping single valued column(s) '+','.join(single_valued_cols))
     dataset=dataset.drop(single_valued_cols,axis=1)
   return dataset
 
@@ -102,6 +117,7 @@ def get_ohe_df(dataset,
   """
   for col in dataset.columns:
     if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold) and col!=target_variable and col not in ignore_cols:
+      print('One hot encoding '+col)
       dataset=helper.one_hot_encoding(dataset,[col])
   return dataset
 
@@ -117,8 +133,7 @@ def drop_non_numeric(dataset):
     if helper.check_numeric_col(dataset[col])==False:
       drop_cols.append(col)
   if len(drop_cols)>0:
-    print("Dropping "+','.join(drop_cols))
-  if len(drop_cols)>0:
+    print("Dropping non categorical/continuous column(s):"+','.join(drop_cols))
     dataset=dataset.drop(drop_cols,axis=1)
   return dataset
 
@@ -147,7 +162,7 @@ def impute_nulls(dataset,
           mode_val=dataset[col].mode()[0]
           dataset[col]=dataset[col].fillna(mode_val)
         elif helper.check_numeric_col(dataset[col]):
-          if scipy.stats.skew(dataset[col])>1:
+          if np.abs(scipy.stats.skew(dataset[col]))>1:
             print("Replaced nulls in "+col+" with median")
             median_val=dataset[col].median()
             dataset[col]=dataset[col].fillna(median_val)
@@ -222,7 +237,9 @@ def get_label_encoded_df(dataset,
   """
   column_labels=dict()
   for col in dataset.columns:
-    if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold):
+    if helper.check_numeric_col(dataset[col]):
+        pass
+    elif helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold):
       labels,dataset=label_encode(dataset,col)
       print('Labels for '+col+': '+str(labels))
       column_labels[col]=labels
@@ -231,8 +248,8 @@ def get_label_encoded_df(dataset,
 
 def cramersv_corr(x, y):
   """
-  Usage: [arg1]:[independent categorical series],[arg2]:[dependent categorical series]
-  Description: Cramér's V is a measure of association between two nominal variables
+  Usage: [arg1]:[categorical series],[arg2]:[categorical series]
+  Description: Cramér's V is a measure of association between two categorical variables
   Returns: A value between 0 and +1
   """
   confusion_matrix = pd.crosstab(x,y)
@@ -245,11 +262,28 @@ def cramersv_corr(x, y):
   kcorr = k-((k-1)**2)/(n-1)
   return np.sqrt(phi2corr/min((kcorr-1),(rcorr-1)))
 
+
 def kendalltau_corr(x, y):
+  """
+  Usage: [arg1]:[continuous series],[arg2]:[categorical series]
+  Description: Cramér's V is a measure of association between a continuous variable and a categorical variable
+  Returns: A value between -1 and +1
+  """
   x_arr=np.array(impute_nulls(pd.DataFrame(x)))
   y_arr=np.array(impute_nulls(pd.DataFrame(y)))
   corr,_=scipy.stats.kendalltau(x_arr,y_arr)
   return corr
+
+
+def pearson_corr(x, y):
+  """
+  Usage: [arg1]:[continuous series],[arg2]:[continuous series]
+  Description: Cramér's V is a measure of association between two continuous variables
+  Returns: A value between -1 and +1
+  """
+  x=pd.to_numeric(x)
+  y=pd.to_numeric(y)
+  return np.corrcoef(x,y)[0,1]
 
 
 def get_correlated_features(dataset,
@@ -271,8 +305,8 @@ def get_correlated_features(dataset,
       elif helper.check_numeric_col(dataset[col]):
         continuous_cols.append(col)
   if target_type=='continuous':
-    continuous_corr=dataset[continuous_cols+[target_col]].corr()
-    for col,coeff in continuous_corr[target_col].items():
+    for col in continuous_cols:
+      coeff=pearson_corr(dataset[col],dataset[target_col])
       col_corr[col]=coeff
     for col in categorical_cols:
       coeff=kendalltau_corr(dataset[col],dataset[target_col])
