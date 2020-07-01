@@ -1,6 +1,6 @@
 # Ctrl4AI 
 
-## This is a helper package for Machine Learning and Deep Learning solutions.
+#### This is a helper package for Machine Learning and Deep Learning solutions.
 
 For documentation, please read [HELP.md](https://github.com/vkreat-tech/ctrl4ai/blob/master/HELP.md)
 
