@@ -1,5 +1,6 @@
 CODE_OF_CONDUCT.md
 CONTRIBUTING.md
+HELP.md
 MANIFEST.in
 README.md
 setup.py

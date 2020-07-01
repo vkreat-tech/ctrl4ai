@@ -2,6 +2,7 @@
 
 This is a helper package for Machine Learning and Deep Learning solutions.
 
+For documentation, please read [HELP.md](https://github.com/vkreat-tech/ctrl4ai/blob/master/HELP.md)
 For demo on usage, please check [README.ipynb](https://github.com/vkreat-tech/ctrl4ai/blob/master/README.ipynb)
 
 #### Contact Developers: [Shaji](https://www.linkedin.com/in/shaji-james/), [Charu](https://www.linkedin.com/in/charunethragiri/), [Selva](https://www.linkedin.com/in/selva-prasanth-274b66166/)
@@ -55,5 +56,5 @@ This is the first official release of the package
 ## ToDo
 
 - Model specific pre-processing
-- Baggining algoritmns
+- Bagging algorithms
 - Text,Image,Audio,Video Analytics
