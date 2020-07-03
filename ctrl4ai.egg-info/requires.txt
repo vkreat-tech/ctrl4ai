@@ -3,3 +3,4 @@ geopy>=1.17.0
 scipy==1.4.1
 numpy
 pandas
+requests

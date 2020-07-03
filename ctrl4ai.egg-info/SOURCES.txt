@@ -17,5 +17,3 @@ ctrl4ai.egg-info/requires.txt
 ctrl4ai.egg-info/top_level.txt
 ctrl4ai/__pycache__/helper.cpython-36.pyc
 ctrl4ai/__pycache__/preprocessing.cpython-36.pyc
-ctrl4ai/sample_datasets/titanic.csv.gz
-ctrl4ai/sample_datasets/trip_fare.csv.gz
