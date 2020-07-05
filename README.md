@@ -1,4 +1,5 @@
 # Ctrl4AI 
+[![Downloads](http://pepy.tech/badge/ctrl4ai)](http://pepy.tech/project/ctrl4ai)
 
 #### This is a helper package for Machine Learning and Deep Learning solutions.
 
