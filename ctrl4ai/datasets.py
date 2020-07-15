@@ -9,7 +9,6 @@ import pandas as pd
 import requests
 pd.set_option('mode.chained_assignment', None)
 
-
 def titanic():
   """
   Type: Supervised - Classification
