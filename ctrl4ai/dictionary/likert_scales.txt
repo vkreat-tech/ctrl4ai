@@ -1,0 +1,2 @@
+{'Strongly Disagree':1,'Disagree':2,'Undecided':3,'Agree':4,'Strongly Agree':5}
+{'Disagree Strongly':1,'Disagree Moderately':2,'Disagree Slightly':3,'Agree Slightly':4,'Agree Moderately':5,'Agree Strongly':6}
