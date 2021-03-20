@@ -3,7 +3,7 @@ from ctrl4ai import helper
 import matplotlib.pyplot as plt
 import pandas as pd
 
-dataset=datasets.titanic()
+dataset=datasets.titanic(refresh=True)
 median_val=dataset['Age'].median()
 dataset['Age']=dataset['Age'].fillna(median_val)
 print(dataset['Age'].shape)

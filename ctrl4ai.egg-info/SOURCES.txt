@@ -1,6 +1,7 @@
 CODE_OF_CONDUCT.md
 CONTRIBUTING.md
 HELP.md
+LICENSE
 MANIFEST.in
 README.md
 setup.py
@@ -18,3 +19,4 @@ ctrl4ai.egg-info/requires.txt
 ctrl4ai.egg-info/top_level.txt
 ctrl4ai/__pycache__/helper.cpython-36.pyc
 ctrl4ai/__pycache__/preprocessing.cpython-36.pyc
+ctrl4ai/dictionary/likert_scales.txt

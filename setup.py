@@ -13,7 +13,7 @@ if os.path.isfile(requirementPath):
 
 setuptools.setup(
     name="ctrl4ai",
-    version="1.0.3",
+    version="1.0.4",
     author="Shaji James",
     author_email="shajijames7@gmail.com",
     description="A helper package for Machine Learning and Deep Learning Algorithms",
@@ -22,9 +22,9 @@ setuptools.setup(
     url="https://github.com/vkreat-tech/ctrl4ai",
     include_package_data=True,
     packages=setuptools.find_packages(),
-    package_data={
-        "": ["*.txt", "*.gz"]
-    },
+    #package_data={"": ["*.txt"]},
+    #exclude_package_data={"": ["*.csv.gz"]},
+    data_files=[('dictionary', ['ctrl4ai\dictionary\likert_scales.txt'])],
     install_requires=install_requires,
     classifiers=[
         "Programming Language :: Python :: 3",
