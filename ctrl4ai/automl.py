@@ -12,6 +12,8 @@ from . import exceptions
 
 import sklearn
 import pandas as pd
+from pickle import dump
+from datetime import datetime
 pd.set_option('mode.chained_assignment', None)
 
 def preprocess(dataset,
@@ -174,6 +176,11 @@ def scale_transform(dataset,
     elif str.lower(method)=='maxabs':
         scaler=sklearn.preprocessing.MaxAbsScaler()
     arr_data=scaler.fit_transform(dataset)
+    now = datetime.now()
+    timestamp = str(datetime.timestamp(now)).replace('.','_')
+    artifact_file='scaler_'+timestamp+'.pkl'
+    dump(scaler, open(artifact_file, 'wb'))
+    print('Scaler artifact stored in '+artifact_file+'. To reuse, execute scaler = load(open(<Scaler artifact file name>, 'rb'))')
     return arr_data
 
 

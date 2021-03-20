@@ -25,6 +25,7 @@ def get_distance(dataset,
   Usage: [arg1]:[Pandas DataFrame],[arg2]:[column-start_latitude],[arg3]:[column-start_longitude],[arg4]:[column-end_latitude],[arg5]:[column-end_longitude]
   Returns: DataFrame with additional column [Distance in kilometers]
   """
+  print("This module (ctrl4ai.preprocessing) will be deprecated by the end of 2021. Please plan to switch to the same functions in ")
   dataset['kms_'+start_latitude+'_'+end_latitude]=dataset.apply(lambda row: helper.distance_calculator(row[start_latitude], row[start_longitude],row[end_latitude],row[end_longitude]),axis=1)
   return dataset
 

@@ -21,7 +21,7 @@ For demo on usage, please check [README.ipynb](https://github.com/vkreat-tech/ct
 
 Ctrl4AI requires:
 
-* Python (tested under Python 3.6)
+* Python 3 (tested under Python 3.6)
 
 ## Installation
 
@@ -54,10 +54,11 @@ help(automl.preprocess)
 
 ## ChangeLog
 
-This is the first official release of the package
+- Optimized the code for better performance
+- Developed in-house solutions to avoid external dependencies (Removed dependency on geopy)
 
 ## ToDo
 
 - Model specific pre-processing
-- Bagging algorithms
-- Text,Image,Audio,Video Analytics
+- Prepare dataset for bagging Algorithms
+- Preprocessing for Text,Image,Audio,Video Analytics

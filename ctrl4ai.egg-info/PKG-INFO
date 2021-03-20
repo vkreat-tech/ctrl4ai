@@ -1,12 +1,13 @@
 Metadata-Version: 2.1
 Name: ctrl4ai
-Version: 1.0.2
+Version: 1.0.3
 Summary: A helper package for Machine Learning and Deep Learning Algorithms
 Home-page: https://github.com/vkreat-tech/ctrl4ai
 Author: Shaji James
 Author-email: shajijames7@gmail.com
 License: UNKNOWN
 Description: # Ctrl4AI 
+        [![Downloads](http://pepy.tech/badge/ctrl4ai)](http://pepy.tech/project/ctrl4ai)
         
         #### This is a helper package for Machine Learning and Deep Learning solutions.
         
@@ -28,7 +29,7 @@ Description: # Ctrl4AI
         
         Ctrl4AI requires:
         
-        * Python (tested under Python 3.6)
+        * Python 3 (tested under Python 3.6)
         
         ## Installation
         
@@ -61,13 +62,14 @@ Description: # Ctrl4AI
         
         ## ChangeLog
         
-        This is the first official release of the package
+        - Optimized the code for better performance
+        - Developed in-house solutions to avoid external dependencies (Removed dependency on geopy)
         
         ## ToDo
         
         - Model specific pre-processing
-        - Bagging algorithms
-        - Text,Image,Audio,Video Analytics
+        - Prepare dataset for bagging Algorithms
+        - Preprocessing for Text,Image,Audio,Video Analytics
         
 Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 3

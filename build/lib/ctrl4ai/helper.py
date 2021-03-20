@@ -5,9 +5,10 @@ Created on Tue May 19 15:27:31 2020
 @author: Shaji,Charu,Selva
 """
 
-import geopy.distance
 import numpy as np
 import pandas as pd
+from math import radians, cos, sin, asin, sqrt
+from scipy import stats
 pd.set_option('mode.chained_assignment', None)
 
 
@@ -59,9 +60,18 @@ def distance_calculator(start_latitude,
   if isNaN(start_latitude)  or isNaN(start_longitude) or isNaN(end_latitude) or isNaN(end_longitude):
     return np.NaN
   else:
-    start = (start_latitude,start_longitude)
-    end = (end_latitude,end_longitude)
-    return geopy.distance.vincenty(start, end).kilometers
+    lat1 = radians(start_latitude)
+    lon1 = radians(start_longitude)
+    lat2 = radians(end_latitude)
+    lon2 = radians(end_longitude)
+    # Haversine formula
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+    c = 2 * asin(sqrt(a))
+    # Radius of earth in kilometers.
+    r = 6371
+    return(c * r)
 
 
 def test_numeric(test_string):
@@ -147,4 +157,31 @@ def one_hot_encoding(dataset,
   return dataset
 
 
+def freedman_diaconis(data, returnas="width"):
+  """
+  Use Freedman Diaconis rule to compute optimal histogram bin width.
+  ``returnas`` can be one of "width" or "bins", indicating whether
+  the bin width or number of bins should be returned respectively.
 
+
+  Parameters
+  ----------
+  data: np.ndarray
+      One-dimensional array.
+
+  returnas: {"width", "bins"}
+      If "width", return the estimated width for each histogram bin.
+      If "bins", return the number of bins suggested by rule.
+  """
+  data = np.asarray(data, dtype=np.float_)
+  IQR  = stats.iqr(data, rng=(25, 75), scale="raw", nan_policy="omit")
+  N    = data.size
+  bw   = (2 * IQR) / np.power(N, 1/3)
+
+  if returnas=="width":
+    result = bw
+  else:
+    datmin, datmax = data.min(), data.max()
+    datrng = datmax - datmin
+    result = int((datrng / bw) + 1)
+  return(result)
