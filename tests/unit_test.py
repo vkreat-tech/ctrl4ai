@@ -1,29 +1,16 @@
 from ctrl4ai import datasets
+from ctrl4ai import preprocessing
 from ctrl4ai import helper
 import matplotlib.pyplot as plt
 import pandas as pd
 
-dataset=datasets.titanic(refresh=True)
+dataset = datasets.titanic()
 median_val=dataset['Age'].median()
 dataset['Age']=dataset['Age'].fillna(median_val)
-print(dataset['Age'].shape)
-width=helper.freedman_diaconis(dataset['Age'],returnas='width')
-bins=helper.freedman_diaconis(dataset['Age'],returnas='bins')
-print(bins)
 
-#dataset['Age'].hist(bins=30)
-#plt.show()
-
-dataset['Age_binned_qcut'] = pd.qcut(dataset['Age'], q=bins, duplicates='drop')
-print(dataset['Age_binned_qcut'].shape)
-print(dataset['Age_binned_qcut'].value_counts())
-
-dataset['Age_binned_cut'] =pd.cut(dataset['Age'], bins=bins)
+dataset['Age_binned_cut']=preprocessing.binning(dataset['Age'])
+print(dataset['Age_binned_cut'])
+print(type(dataset['Age_binned_cut']))
+print(type(dataset['Age_binned_cut'][0]))
 print(dataset['Age_binned_cut'].shape)
 print(dataset['Age_binned_cut'].value_counts())
-
-
-from datetime import datetime
-now = datetime.now()
-timestamp = str(datetime.timestamp(now)).replace('.','_')
-print("timestamp =", timestamp)

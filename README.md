@@ -57,6 +57,10 @@ help(automl.preprocess)
 - Optimized the code for better performance
 - Developed in-house solutions to avoid external dependencies (Removed dependency on geopy)
 
+## Depreciation Notice
+
+- All functions in ```ctrl4ai.preprocessing``` will be depreciated by the end of 2021. Please plan to switch to the same functions in ```ctrl4ai.prepdata```
+
 ## ToDo
 
 - Model specific pre-processing
