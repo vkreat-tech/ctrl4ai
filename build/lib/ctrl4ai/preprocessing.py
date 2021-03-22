@@ -25,7 +25,7 @@ def get_distance(dataset,
   Usage: [arg1]:[Pandas DataFrame],[arg2]:[column-start_latitude],[arg3]:[column-start_longitude],[arg4]:[column-end_latitude],[arg5]:[column-end_longitude]
   Returns: DataFrame with additional column [Distance in kilometers]
   """
-  print("This module (ctrl4ai.preprocessing) will be deprecated by the end of 2021. Please plan to switch to the same functions in ")
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   dataset['kms_'+start_latitude+'_'+end_latitude]=dataset.apply(lambda row: helper.distance_calculator(row[start_latitude], row[start_longitude],row[end_latitude],row[end_longitude]),axis=1)
   return dataset
 
@@ -37,6 +37,7 @@ def get_timediff(dataset,
   Usage: [arg1]:[Pandas DataFrame],[arg2]:[column-start_time],[arg3]:[column-end_time]
   Returns: DataFrame with additional column [Duration in seconds]
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   dataset['secs_diff_'+start_time+'_'+end_time]=(dataset[end_time]-dataset[start_time]).dt.total_seconds()
   return dataset
 
@@ -48,6 +49,7 @@ def derive_from_datetime(dataset):
   Description: Derives the hour, weekday, year and month from a datetime column
   Returns: Dataframe [with new columns derived from datetime columns]
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   for column,dtype in dataset.dtypes.items():
     if 'datetime' in str(dtype):
       dataset['hour_of_'+column]=dataset[column].apply(lambda x: x.hour)
@@ -63,6 +65,7 @@ def log_transform(dataset,method='yeojohnson',categorical_threshold=0.3):
   Description: Checks if the a continuous column is skewed and does log transformation
   Returns: Dataframe [with all skewed columns normalized using appropriate approach]
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   for col in dataset.columns:
     if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold)==False and helper.check_numeric_col(dataset[col]) and np.abs(scipy.stats.skew(dataset[col]))>1:
       print('Log Normalization('+method+') applied for '+col)
@@ -80,6 +83,7 @@ def drop_null_fields(dataset,
   Description: Drop columns that has more null values
   Returns: Dataframe [with null dominated columns removed]
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   no_of_records=dataset.shape[0]
   select_cols=[]
   for index,val in dataset.isnull().sum().items():
@@ -96,6 +100,7 @@ def drop_single_valued_cols(dataset):
   Description: Drop columns that has only one value in it
   Returns: Dataframe [without single valued columns]
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   single_valued_cols=[]
   for col in dataset.columns:
     if helper.single_valued_col(dataset[col]):
@@ -116,6 +121,7 @@ def get_ohe_df(dataset,
   Note: Consumes more system mermory if the size of the dataset is huge
   Returns: Dataframe [with separate column for each categorical values]
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   for col in dataset.columns:
     if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold) and col!=target_variable and col not in ignore_cols:
       print('One hot encoding '+col)
@@ -129,6 +135,7 @@ def drop_non_numeric(dataset):
   Description: Drop columns that are not numeric
   Returns: Dataframe [only numeric features]
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   drop_cols=[]
   for col in dataset.columns:
     if helper.check_numeric_col(dataset[col])==False:
@@ -147,6 +154,7 @@ def impute_nulls(dataset,
   Note: KNN consumes more system mermory if the size of the dataset is huge
   Returns: Dataframe [with separate column for each categorical values]
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   if str.lower(method)=='knn':
     k_knn=int(np.ceil(np.sqrt(dataset.shape[0])))
     if k_knn%2==0:
@@ -184,6 +192,7 @@ def label_encode(dataset,
   Description: Labelling categorical features with numbers from 0 to n categories
   Returns: Label Dict , Dataframe
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   mode_val=dataset[col].mode()[0]
   dataset[col]=dataset[col].apply(lambda x:str(x).strip()).astype(str).fillna(mode_val)
   label_dict=dict(zip(dataset[col].unique(),np.arange(dataset[col].unique().shape[0])))
@@ -200,6 +209,7 @@ def remove_outlier_df(dataset,
   Description: The column needs to be continuous
   Returns: DataFrame with outliers removed for the specific columns
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   for col in cols:
     outlier_temp_dataset=pd.DataFrame(dataset[col])
     outlier_temp_dataset=impute_nulls(outlier_temp_dataset)
@@ -221,6 +231,7 @@ def auto_remove_outliers(dataset,
   Description: Checks if the column is continuous and removes outliers
   Returns: DataFrame with outliers removed
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   continuous_columns=[]
   for col in dataset.columns:
     if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold)==False and helper.check_numeric_col(dataset[col])==True:
@@ -236,6 +247,7 @@ def get_label_encoded_df(dataset,
   Description: Auto identifies categorical features in the dataframe and does label encoding
   Returns: Dataframe [with separate column for each categorical values]
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   column_labels=dict()
   for col in dataset.columns:
     if helper.check_numeric_col(dataset[col]):
@@ -253,6 +265,7 @@ def cramersv_corr(x, y):
   Description: Cramer's V Correlation is a measure of association between two categorical variables
   Returns: A value between 0 and +1
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   confusion_matrix = pd.crosstab(x,y)
   chi2 = scipy.stats.chi2_contingency(confusion_matrix)[0]
   n = confusion_matrix.sum().sum()
@@ -270,6 +283,7 @@ def kendalltau_corr(x, y):
   Description: Kendall Tau Correlation is a measure of association between a continuous variable and a categorical variable
   Returns: A value between -1 and +1
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   x_arr=np.array(impute_nulls(pd.DataFrame(x)))
   y_arr=np.array(impute_nulls(pd.DataFrame(y)))
   corr,_=scipy.stats.kendalltau(x_arr,y_arr)
@@ -282,6 +296,7 @@ def pearson_corr(x, y):
   Description: Pearson Correlation is a measure of association between two continuous variables
   Returns: A value between -1 and +1
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   x=pd.to_numeric(x)
   y=pd.to_numeric(y)
   return np.corrcoef(x,y)[0,1]
@@ -296,6 +311,7 @@ def get_correlated_features(dataset,
   Description: Only for supervised learning to select independent variables that has some correlation with target/dependent variable (Uses Pearson correlation between two continuous variables, CramersV correlation between two categorical variables, Kendalls Tau correlation between a categorical and a continuos variable)
   Returns: Dictionary of correlation coefficients, List of columns that have considerable correlation
   """
+  print("This module (ctrl4ai.preprocessing) will be depreciated by the end of 2021. Please plan to switch to the same functions in ctrl4ai.prepdata")
   categorical_cols=[]
   continuous_cols=[]
   col_corr=dict()

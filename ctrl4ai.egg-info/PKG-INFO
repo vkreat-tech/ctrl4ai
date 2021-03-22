@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: ctrl4ai
-Version: 1.0.4
+Version: 1.0.5
 Summary: A helper package for Machine Learning and Deep Learning Algorithms
 Home-page: https://github.com/vkreat-tech/ctrl4ai
 Author: Shaji James
@@ -65,6 +65,10 @@ Description: # Ctrl4AI
         - Optimized the code for better performance
         - Developed in-house solutions to avoid external dependencies (Removed dependency on geopy)
         
+        ## Depreciation Notice
+        
+        - All functions in ```ctrl4ai.preprocessing``` will be depreciated by the end of 2021. Please plan to switch to the same functions in ```ctrl4ai.prepdata```
+        
         ## ToDo
         
         - Model specific pre-processing
@@ -75,5 +79,7 @@ Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
 Requires-Python: >=3.6
 Description-Content-Type: text/markdown

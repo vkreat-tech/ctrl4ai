@@ -180,7 +180,7 @@ def scale_transform(dataset,
     timestamp = str(datetime.timestamp(now)).replace('.','_')
     artifact_file='scaler_'+timestamp+'.pkl'
     dump(scaler, open(artifact_file, 'wb'))
-    print('Scaler artifact stored in '+artifact_file+'. To reuse, execute scaler = load(open(<Scaler artifact file name>, 'rb'))')
+    print('Scaler artifact stored in '+artifact_file+'. To reuse, execute scaler = load(open(<Scaler artifact file name>, \'rb\'))')
     return arr_data
 
 

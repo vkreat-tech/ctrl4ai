@@ -13,7 +13,7 @@ if os.path.isfile(requirementPath):
 
 setuptools.setup(
     name="ctrl4ai",
-    version="1.0.4",
+    version="1.0.5",
     author="Shaji James",
     author_email="shajijames7@gmail.com",
     description="A helper package for Machine Learning and Deep Learning Algorithms",
@@ -30,6 +30,8 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
+        "Development Status :: 5 - Production/Stable",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     python_requires='>=3.6',
 )
