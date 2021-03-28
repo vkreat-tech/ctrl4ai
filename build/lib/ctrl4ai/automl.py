@@ -5,7 +5,7 @@ Created on Tue May 19 19:00:36 2020
 @author: Shaji,Charu,Selva
 """
 
-from . import preprocessing
+from . import prepdata
 from . import helper
 from . import exceptions
 
@@ -72,14 +72,16 @@ def preprocess(dataset,
     #resetting the index of the dataset
     dataset=dataset.reset_index(drop=True)
     if derive_from_datetime:
-        dataset=preprocessing.derive_from_datetime(dataset)
-    
+        dataset=prepdata.derive_from_datetime(dataset)
+
+    dataset=helper.bool_to_int(dataset)
+
     #remove null dominated fields based on threshold if the flag is true
     if drop_null_dominated:
-        dataset=preprocessing.drop_null_fields(dataset,dropna_threshold=dropna_threshold)
+        dataset=prepdata.drop_null_fields(dataset,dropna_threshold=dropna_threshold)
         
     #drop all single valued columns
-    dataset=preprocessing.drop_single_valued_cols(dataset)
+    dataset=prepdata.drop_single_valued_cols(dataset)
     
     #split categorical and continuous variables
     categorical_cols=[]
@@ -109,24 +111,24 @@ def preprocess(dataset,
     continuous_dataset=dataset[continuous_cols]
     
     # encoding categorical features
-    categorical_dataset=preprocessing.impute_nulls(categorical_dataset)
+    categorical_dataset=prepdata.impute_nulls(categorical_dataset)
     if str.lower(tranform_categorical)=='label_encoding':
-        col_labels,categorical_dataset=preprocessing.get_label_encoded_df(categorical_dataset,categorical_threshold=categorical_threshold)
+        col_labels,categorical_dataset=prepdata.get_label_encoded_df(categorical_dataset,categorical_threshold=categorical_threshold)
     elif str.lower(tranform_categorical)=='one_hot_encoding':
-        categorical_dataset=preprocessing.get_ohe_df(categorical_dataset,ignore_cols=ohe_ignore_cols,categorical_threshold=categorical_threshold)
+        categorical_dataset=prepdata.get_ohe_df(categorical_dataset,ignore_cols=ohe_ignore_cols,categorical_threshold=categorical_threshold)
         for col in ohe_ignore_cols:
             if helper.check_numeric_col(categorical_dataset[col]):
                 pass
             else:
-                label_dict,categorical_dataset=preprocessing.label_encode(categorical_dataset,col)
+                label_dict,categorical_dataset=prepdata.label_encode(categorical_dataset,col)
                 col_labels[col]=label_dict
     
     # impute nulls in continuous features using choosen method
-    continuous_dataset=preprocessing.impute_nulls(continuous_dataset,method=impute_null_method)
+    continuous_dataset=prepdata.impute_nulls(continuous_dataset,method=impute_null_method)
     
     # does log transform based on the choosen method if opted
     if log_transform is not None:
-        continuous_dataset=preprocessing.log_transform(method=log_transform,categorical_threshold=categorical_threshold)
+        continuous_dataset=prepdata.log_transform(method=log_transform,categorical_threshold=categorical_threshold)
         
     #merge datasets
     cleansed_dataset=pd.concat([categorical_dataset,continuous_dataset],axis=1)
@@ -134,23 +136,23 @@ def preprocess(dataset,
         target_df=pd.DataFrame(dataset[target_variable])
         if str.lower(target_type)=='categorical':
             # label encode if target variable is categorical
-            label_dict,target_df=preprocessing.label_encode(target_df,target_variable)
+            label_dict,target_df=prepdata.label_encode(target_df,target_variable)
             col_labels[target_variable]=label_dict
         mapped_dataset=pd.concat([cleansed_dataset,target_df],axis=1)
         
         #remove outliers if opted
         if remove_outliers:
-            mapped_dataset=preprocessing.auto_remove_outliers(mapped_dataset,ignore_cols=[target_variable],categorical_threshold=categorical_threshold)
+            mapped_dataset=prepdata.auto_remove_outliers(mapped_dataset,ignore_cols=[target_variable],categorical_threshold=categorical_threshold)
         
         # does feature selection for supervised learning if opted
         if feature_selection:
-            col_corr,correlated_features=preprocessing.get_correlated_features(mapped_dataset,target_variable,target_type)
+            col_corr,correlated_features=prepdata.get_correlated_features(mapped_dataset,target_variable,target_type)
             final_dataset=mapped_dataset[correlated_features+[target_variable]]
     elif str.lower(learning_type)=='unsupervised':
         
         #remove outliers if opted
         if remove_outliers:
-            cleansed_dataset=preprocessing.auto_remove_outliers(cleansed_dataset,categorical_threshold=categorical_threshold)
+            cleansed_dataset=prepdata.auto_remove_outliers(cleansed_dataset,categorical_threshold=categorical_threshold)
         final_dataset=cleansed_dataset
     return col_labels,final_dataset
 
@@ -211,11 +213,11 @@ def master_correlation(dataset,
     categorical_dataset=dataset[categorical_cols]
     continuous_dataset=dataset[continuous_cols]
     
-    _,categorical_dataset=preprocessing.get_label_encoded_df(dataset[categorical_cols])
+    _,categorical_dataset=prepdata.get_label_encoded_df(dataset[categorical_cols])
     
     data=pd.concat([categorical_dataset,continuous_dataset],axis=1)
-    data=preprocessing.drop_single_valued_cols(data)
-    data=preprocessing.impute_nulls(data,method='central_tendency')
+    data=prepdata.drop_single_valued_cols(data)
+    data=prepdata.impute_nulls(data,method='central_tendency')
     
     column_list=data.columns
     
@@ -232,13 +234,13 @@ def master_correlation(dataset,
         col1=comb[0]
         col2=comb[1]
         if col1 in continuous_cols and col2 in continuous_cols:
-            corr_value=preprocessing.pearson_corr(data[col1],data[col2])
+            corr_value=prepdata.pearson_corr(data[col1],data[col2])
         elif col1 in categorical_cols and col2 in categorical_cols:
-            corr_value=preprocessing.cramersv_corr(data[col1],data[col2])
+            corr_value=prepdata.cramersv_corr(data[col1],data[col2])
         elif col1 in continuous_cols and col2 in categorical_cols:
-            corr_value=preprocessing.kendalltau_corr(data[col1],data[col2])
+            corr_value=prepdata.kendalltau_corr(data[col1],data[col2])
         elif col1 in categorical_cols and col2 in continuous_cols:
-            corr_value=preprocessing.kendalltau_corr(data[col1],data[col2])
+            corr_value=prepdata.kendalltau_corr(data[col1],data[col2])
         corr_df.loc[col1,col2]=corr_value
         corr_df.loc[col2,col1]=corr_value
     return corr_df

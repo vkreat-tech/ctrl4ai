@@ -4,13 +4,7 @@ from ctrl4ai import automl
 from ctrl4ai import helper
 import pandas as pd
 
-dataset = datasets.titanic()
-median_val=dataset['Age'].median()
-dataset['Age']=dataset['Age'].fillna(median_val)
-
-dataset['Age_binned_cut']=prepdata.binning(dataset['Age'])
-print(dataset['Age_binned_cut'])
-print(type(dataset['Age_binned_cut']))
-print(type(dataset['Age_binned_cut'][0]))
-print(dataset['Age_binned_cut'].shape)
-print(dataset['Age_binned_cut'].value_counts())
+data = pd.DataFrame([[True, False, True], [False, False, True]])
+print(data)
+converted=helper.bool_to_int(data)
+print(converted)

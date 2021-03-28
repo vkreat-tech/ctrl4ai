@@ -185,3 +185,11 @@ def freedman_diaconis(data, returnas="width"):
     datrng = datmax - datmin
     result = int((datrng / bw) + 1)
   return(result)
+
+def bool_to_int(dataset):
+  for col in dataset:
+    if dataset[col].dtype=='bool':
+      dataset[col]=dataset[col].astype('int')
+  return(dataset)
+
+
