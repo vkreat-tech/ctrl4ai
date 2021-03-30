@@ -143,9 +143,10 @@ def preprocess(dataset,
     if str.lower(learning_type)=='supervised':
         target_df=pd.DataFrame(dataset[target_variable])
         if str.lower(target_type)=='categorical':
-            # label encode if target variable is categorical
-            label_dict,target_df=prepdata.label_encode(target_df,target_variable)
-            col_labels[target_variable]=label_dict
+            if not helper.check_numeric_col(dataset[target_variable]):
+                # label encode if target variable is categorical
+                label_dict,target_df=prepdata.label_encode(target_df,target_variable)
+                col_labels[target_variable]=label_dict
         mapped_dataset=pd.concat([cleansed_dataset,target_df],axis=1)
         
         #remove outliers if opted

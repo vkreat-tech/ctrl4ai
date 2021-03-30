@@ -22,3 +22,5 @@ print(dataset)
 labels,dataset=automl.preprocess(dataset,learning_type='Supervised',target_variable='score',target_type='continuous',feature_selection=False)
 
 print(dataset)
+
+print(labels)
