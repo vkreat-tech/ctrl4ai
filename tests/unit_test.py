@@ -19,7 +19,6 @@ labels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']
 dataset = pd.DataFrame(exam_data , index=labels)
 print(dataset)
 
-labels,dataset=prepdata.get_ordinal_encoded_df(dataset)
+labels,dataset=automl.preprocess(dataset,learning_type='Supervised',target_variable='score',target_type='continuous',feature_selection=False)
+
 print(dataset)
-print('\n')
-print(labels)

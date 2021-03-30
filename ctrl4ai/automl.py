@@ -86,7 +86,7 @@ def preprocess(dataset,
     #transform ordinal columns to integer values
     ordinal_labels,dataset=prepdata.get_ordinal_encoded_df(dataset)
     col_labels.update(ordinal_labels)
-    ordinal_cols=list(ordinal_labels.keys())
+    ordinal_cols=[col for col in ordinal_labels.keys() if col!=target_variable]
     define_categorical_cols.extend(ordinal_cols)
     define_categorical_cols=list(set(define_categorical_cols))
 
@@ -156,8 +156,10 @@ def preprocess(dataset,
         if feature_selection:
             col_corr,correlated_features=prepdata.get_correlated_features(mapped_dataset,target_variable,target_type)
             final_dataset=mapped_dataset[correlated_features+[target_variable]]
+        else:
+            final_dataset=mapped_dataset
     elif str.lower(learning_type)=='unsupervised':
-        
+
         #remove outliers if opted
         if remove_outliers:
             cleansed_dataset=prepdata.auto_remove_outliers(cleansed_dataset,categorical_threshold=categorical_threshold)
