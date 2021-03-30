@@ -39,7 +39,7 @@ Check for the latest available version in [Ctrl4AI](https://pypi.org/project/ctr
 
 Import any module from the package thru the following method:
 ```bash
-from ctrl4ai import preprocessing
+from ctrl4ai import prepdata
 ```
 ```bash
 from ctrl4ai import automl
@@ -54,8 +54,7 @@ help(automl.preprocess)
 
 ## ChangeLog
 
-- Optimized the code for better performance
-- Developed in-house solutions to avoid external dependencies (Removed dependency on geopy)
+- Added features to transform ordinal values (from string to integers)
 
 ## Depreciation Notice
 

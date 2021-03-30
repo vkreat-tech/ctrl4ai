@@ -6,6 +6,7 @@ MANIFEST.in
 README.md
 setup.py
 ctrl4ai/__init__.py
+ctrl4ai/_ordinal_dictionary.py
 ctrl4ai/automl.py
 ctrl4ai/datadict.py
 ctrl4ai/datasets.py
@@ -20,4 +21,3 @@ ctrl4ai.egg-info/requires.txt
 ctrl4ai.egg-info/top_level.txt
 ctrl4ai/__pycache__/helper.cpython-36.pyc
 ctrl4ai/__pycache__/preprocessing.cpython-36.pyc
-ctrl4ai/dictionary/likert_scales.txt

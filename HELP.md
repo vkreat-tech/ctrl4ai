@@ -42,7 +42,7 @@
         maxabs: Handling sparse data
 
 
-# ctrl4ai.preprocessing
+# ctrl4ai.prepdata
 
 ##    auto_remove_outliers(dataset, ignore_cols=[], categorical_threshold=0.3)
         Usage: [arg1]:[pandas dataframe],[ignore_cols]:[list of columns to be ignored],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]

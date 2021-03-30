@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: ctrl4ai
-Version: 1.0.6
+Version: 1.0.7
 Summary: A helper package for Machine Learning and Deep Learning Algorithms
 Home-page: https://github.com/vkreat-tech/ctrl4ai
 Author: Shaji James
@@ -47,7 +47,7 @@ Description: # Ctrl4AI
         
         Import any module from the package thru the following method:
         ```bash
-        from ctrl4ai import preprocessing
+        from ctrl4ai import prepdata
         ```
         ```bash
         from ctrl4ai import automl
@@ -62,8 +62,7 @@ Description: # Ctrl4AI
         
         ## ChangeLog
         
-        - Optimized the code for better performance
-        - Developed in-house solutions to avoid external dependencies (Removed dependency on geopy)
+        - Added features to transform ordinal values (from string to integers)
         
         ## Depreciation Notice
         

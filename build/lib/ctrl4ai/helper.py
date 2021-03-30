@@ -11,6 +11,7 @@ from math import radians, cos, sin, asin, sqrt
 from scipy import stats
 pd.set_option('mode.chained_assignment', None)
 
+from . import _ordinal_dictionary
 
 def isNaN(num):
   """
@@ -98,6 +99,35 @@ def check_numeric_col(col_series):
     return True
   else:
     return False
+
+
+def check_ordinal_col(col_series):
+  """
+  Usage: [arg1]:[Pandas Series / Single selected column of a dataframe]
+  Description: Checks if all the column contains ordinal values checking against the Ctrl4AI's data dictionary
+  Returns: Boolean [True/False], dict [ordinal to numeric mapper]
+  """
+  result=False
+  result_dict=dict()
+  if not check_numeric_col(col_series):
+    mode_val = col_series.mode()[0]
+    col_series =col_series.fillna(mode_val).astype('str')
+    distinct_elements=list(col_series.unique())
+    unique_elements=[str.lower(val.replace(' ','')) for val in col_series.unique()]
+    unique_elements=list(set(unique_elements))
+    count=len(unique_elements)
+    possible_scales=_ordinal_dictionary._get_possible_scales(count)
+    for scale in possible_scales:
+      unique_keys=[str.lower(val.replace(' ','')) for val in scale.keys()]
+      if set(unique_keys)==set(unique_elements):
+        result=True
+        transformed_mapper=dict()
+        for key in scale.keys():
+          new_key=str.lower(key.replace(' ',''))
+          transformed_mapper[new_key]=scale[key]
+        for val in distinct_elements:
+          result_dict[val]=transformed_mapper[str.lower(val.replace(' ',''))]
+  return(result,result_dict)
 
 
 def check_categorical_col(col_series,

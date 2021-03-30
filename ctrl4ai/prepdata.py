@@ -243,7 +243,7 @@ def get_label_encoded_df(dataset,
     """
   Usage: [arg1]:[pandas dataframe],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
   Description: Auto identifies categorical features in the dataframe and does label encoding
-  Returns: Dataframe [with separate column for each categorical values]
+  Returns: Dictionary [Labels for columns],Dataframe [with separate column for each categorical values]
   """
     column_labels = dict()
     for col in dataset.columns:
@@ -254,6 +254,24 @@ def get_label_encoded_df(dataset,
             print('Labels for ' + col + ': ' + str(labels))
             column_labels[col] = labels
     return column_labels, dataset
+
+
+def get_ordinal_encoded_df(dataset):
+    """
+    Usage: [arg1]:[pandas dataframe]
+    Description: Identifies ordinal columns and translate them to numbers
+    Returns: Dictionary [Labels for columns], Dataframe [with ordinal values converted to number]
+    """
+    column_labels = dict()
+    for col in dataset:
+        result,mapper=helper.check_ordinal_col(dataset[col])
+        if result:
+            dataset[col]=dataset[col].astype(str).map(mapper)
+            mode_val = dataset[col].mode()[0]
+            dataset[col]=dataset[col].fillna(mode_val).astype('int')
+            column_labels[col] = mapper
+            print('Labels for ' + col + ': ' + str(mapper))
+    return column_labels,dataset
 
 
 def cramersv_corr(x, y):

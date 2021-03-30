@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Jul 19 13:15:40 2020
+Created on Tue May 19 17:54:12 2020
 
-@author: ShajiJamesSelvakumar
+@author: Shaji,Charu,Selva
 """
 
 likert_scales=open(r'C:\Users\ShajiJamesSelvakumar\Documents\Ctrl4AI\ctrl4ai\dictionary\likert_scales.txt').readlines()

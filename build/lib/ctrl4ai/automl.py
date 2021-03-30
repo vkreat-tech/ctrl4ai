@@ -82,7 +82,14 @@ def preprocess(dataset,
         
     #drop all single valued columns
     dataset=prepdata.drop_single_valued_cols(dataset)
-    
+
+    #transform ordinal columns to integer values
+    ordinal_labels,dataset=prepdata.get_ordinal_encoded_df(dataset)
+    col_labels.update(ordinal_labels)
+    ordinal_cols=list(ordinal_labels.keys())
+    define_categorical_cols.extend(ordinal_cols)
+    define_categorical_cols=list(set(define_categorical_cols))
+
     #split categorical and continuous variables
     categorical_cols=[]
     continuous_cols=[]
@@ -113,7 +120,8 @@ def preprocess(dataset,
     # encoding categorical features
     categorical_dataset=prepdata.impute_nulls(categorical_dataset)
     if str.lower(tranform_categorical)=='label_encoding':
-        col_labels,categorical_dataset=prepdata.get_label_encoded_df(categorical_dataset,categorical_threshold=categorical_threshold)
+        encoded_labels,categorical_dataset=prepdata.get_label_encoded_df(categorical_dataset,categorical_threshold=categorical_threshold)
+        col_labels.update(encoded_labels)
     elif str.lower(tranform_categorical)=='one_hot_encoding':
         categorical_dataset=prepdata.get_ohe_df(categorical_dataset,ignore_cols=ohe_ignore_cols,categorical_threshold=categorical_threshold)
         for col in ohe_ignore_cols:
