@@ -189,19 +189,9 @@ def one_hot_encoding(dataset,
 
 def freedman_diaconis(data, returnas="width"):
   """
-  Use Freedman Diaconis rule to compute optimal histogram bin width.
-  ``returnas`` can be one of "width" or "bins", indicating whether
-  the bin width or number of bins should be returned respectively.
-
-
-  Parameters
-  ----------
-  data: np.ndarray
-      One-dimensional array.
-
-  returnas: {"width", "bins"}
-      If "width", return the estimated width for each histogram bin.
-      If "bins", return the number of bins suggested by rule.
+  Usage: [arg1]:[Pandas Series],[arg2]:[returnas: {"width", "bins"}]
+  Description: Use Freedman Diaconis rule to compute optimal histogram bin width. ``returnas`` can be one of "width" or "bins", indicating whether the bin width or number of bins should be returned respectively.
+  Retuns: Numberic [Width/No.of bins - whatever is opted]
   """
   data = np.asarray(data, dtype=np.float_)
   IQR  = stats.iqr(data, rng=(25, 75), scale="raw", nan_policy="omit")
@@ -216,10 +206,19 @@ def freedman_diaconis(data, returnas="width"):
     result = int((datrng / bw) + 1)
   return(result)
 
+
 def bool_to_int(dataset):
+  """
+  Usage: [arg1]:[pandas dataframe]
+  Description: Transformation for boolean features to integers
+  Returns: Dataframe [with booleans converted to integers]
+  """
   for col in dataset:
-    if dataset[col].dtype=='bool':
-      dataset[col]=dataset[col].astype('int')
+    if check_categorical_col(dataset[col]):
+      mode_val=dataset[col].mode()[0]
+      dataset[col]=dataset[col].fillna(mode_val)
+      if dataset[col].dtype=='bool':
+        dataset[col]=dataset[col].astype('int')
   return(dataset)
 
 

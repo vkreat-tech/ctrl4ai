@@ -74,12 +74,12 @@ def preprocess(dataset,
     if derive_from_datetime:
         dataset=prepdata.derive_from_datetime(dataset)
 
-    dataset=helper.bool_to_int(dataset)
-
     #remove null dominated fields based on threshold if the flag is true
     if drop_null_dominated:
         dataset=prepdata.drop_null_fields(dataset,dropna_threshold=dropna_threshold)
-        
+
+    dataset=helper.bool_to_int(dataset)
+
     #drop all single valued columns
     dataset=prepdata.drop_single_valued_cols(dataset)
 
