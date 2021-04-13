@@ -87,33 +87,35 @@ def preprocess(dataset,
     ordinal_labels,dataset=prepdata.get_ordinal_encoded_df(dataset)
     col_labels.update(ordinal_labels)
     ordinal_cols=[col for col in ordinal_labels.keys() if col!=target_variable]
-    define_categorical_cols.extend(ordinal_cols)
-    define_categorical_cols=list(set(define_categorical_cols))
+    print('Columns identified as ordinal are '+','.join(ordinal_cols))
+    reserved_cols=[]
+    reserved_cols.extend(define_continuous_cols)
+    reserved_cols.extend(define_categorical_cols)
+    reserved_cols.extend(ordinal_cols)
 
     #split categorical and continuous variables
     categorical_cols=[]
     continuous_cols=[]
+    categorical_cols.extend(ordinal_cols)
+    categorical_cols.extend(define_categorical_cols)
+    continuous_cols.extend(define_continuous_cols)
+    categorical_cols=list(set(categorical_cols))
+    continuous_cols=list(set(continuous_cols))
     if str.lower(learning_type)=='supervised':
         for col in dataset:
             if col!=target_variable:
-                if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold) and col not in define_continuous_cols:
+                if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold) and col not in reserved_cols:
                     categorical_cols.append(col)
-                elif helper.check_numeric_col(dataset[col]) and col not in define_categorical_cols:
+                elif helper.check_numeric_col(dataset[col]) and col not in reserved_cols:
                     continuous_cols.append(col)
     else:
         for col in dataset:
-            if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold) and col not in define_continuous_cols:
+            if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold) and col not in reserved_cols:
                 categorical_cols.append(col)
-            elif helper.check_numeric_col(dataset[col]) and col not in define_categorical_cols:
+            elif helper.check_numeric_col(dataset[col]) and col not in reserved_cols:
                 continuous_cols.append(col)
-    for col in define_categorical_cols:
-        if col not in categorical_cols:
-            categorical_cols.append(col)
-    for col in define_continuous_cols:
-        if col not in continuous_cols:
-            continuous_cols.append(col)
-    print('Columns identified as continuous are '+','.join(continuous_cols))        
-    print('Columns identified as categorical are '+','.join(categorical_cols))   
+    print('Columns identified as continuous are '+','.join(continuous_cols))
+    print('Columns identified as categorical are '+','.join(categorical_cols))
     categorical_dataset=dataset[categorical_cols]
     continuous_dataset=dataset[continuous_cols]
     
