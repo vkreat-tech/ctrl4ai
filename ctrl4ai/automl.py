@@ -217,11 +217,14 @@ def master_correlation(dataset,
     """
     categorical_cols=[]
     continuous_cols=[]
+    categorical_cols.extend(define_categorical_cols)
+    continuous_cols.extend(define_continuous_cols)
     for col in dataset:
-        if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold):
-            categorical_cols.append(col)
-        elif helper.check_numeric_col(dataset[col]):
-            continuous_cols.append(col)
+        if col not in categorical_cols+continuous_cols:
+            if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold):
+                categorical_cols.append(col)
+            elif helper.check_numeric_col(dataset[col]):
+                continuous_cols.append(col)
     
     categorical_dataset=dataset[categorical_cols]
     continuous_dataset=dataset[continuous_cols]
@@ -257,3 +260,89 @@ def master_correlation(dataset,
         corr_df.loc[col1,col2]=corr_value
         corr_df.loc[col2,col1]=corr_value
     return corr_df
+
+
+class preprocessor:
+    impute_null_method='central_tendency'
+    tranform_categorical='label_encoding'
+    categorical_threshold=0.3
+    remove_outliers=False
+    log_transform=None
+    drop_null_dominated=True
+    dropna_threshold=0.7
+    derive_from_datetime=True
+    ohe_ignore_cols=[]
+    feature_selection=True
+    define_continuous_cols=[]
+    define_categorical_cols=[]
+    ordinal_dict=dict()
+    artifact=dict()
+    col_labels=dict()
+    feature_selection_threshold=None
+
+    def __init__(self,dataset,
+                 learning_type,
+                 target_variable=None,
+                 target_type=None,):
+        self.dataset=dataset
+        self.learning_type=learning_type
+        self.target_variable=target_variable
+        self.target_type=target_type
+
+    def set_impute_null_method(self,impute_null_method):
+        self.impute_null_method=impute_null_method
+
+    def set_tranform_categorical(self,tranform_categorical,ohe_ignore_cols=[]):
+        self.tranform_categorical=tranform_categorical
+        self.ohe_ignore_cols=ohe_ignore_cols
+
+    def set_categorical_threshold(self,categorical_threshold):
+        self.categorical_threshold=categorical_threshold
+
+    def set_remove_outliers(self,remove_outliers):
+        self.remove_outliers
+
+    def set_log_transform(self,log_transform):
+        self.log_transform=log_transform
+
+    def set_drop_null_dominated(self,drop_null_dominated,dropna_threshold=0.7):
+        self.drop_null_dominated=drop_null_dominated
+        self.dropna_threshold=dropna_threshold
+
+    def derive_from_datetime(self,derive_from_datetime):
+        self.derive_from_datetime=derive_from_datetime
+
+    def set_feature_selection(self,feature_selection,threshold=None):
+        self.feature_selection=feature_selection
+        self.feature_selection_threshold=threshold
+
+    def set_continuous_columns(self,continuous_cols):
+        self.define_continuous_cols=continuous_cols
+
+    def set_nominal_columns(self,categorical_cols):
+        self.define_categorical_cols=categorical_cols
+
+    def set_ordinal_dict(self,ordinal_dict):
+        self.ordinal_dict=ordinal_dict
+        self.define_categorical_cols.extend(list(ordinal_dict.keys()))
+
+    def get_preprocessor_artifact(self):
+        return self.artifact
+
+    def get_col_labels(self):
+        return self.col_labels
+
+    def get_processed_dataset(self):
+        pass
+
+
+
+
+
+
+
+
+
+
+
+

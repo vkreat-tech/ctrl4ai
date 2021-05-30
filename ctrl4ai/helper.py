@@ -194,7 +194,7 @@ def freedman_diaconis(data, returnas="width"):
   Retuns: Numberic [Width/No.of bins - whatever is opted]
   """
   data = np.asarray(data, dtype=np.float_)
-  IQR  = stats.iqr(data, rng=(25, 75), scale="raw", nan_policy="omit")
+  IQR  = stats.iqr(data, rng=(25, 75), scale=1.0, nan_policy="omit")
   N    = data.size
   bw   = (2 * IQR) / np.power(N, 1/3)
 
@@ -221,4 +221,32 @@ def bool_to_int(dataset):
         dataset[col]=dataset[col].astype('int')
   return(dataset)
 
+
+def get_columns_subsets(cols,min_cols=1):
+  """
+  Usage: [arg1]:[list of columns], [min_cols (default=1):[values in the range of 1 to length of columns]
+  Description: Gets all subsets of the column list
+  Returns: [column list]
+  """
+  lists = []
+  l=list(cols)
+  for i in range(len(l) + 1):
+    for j in range(i):
+      subset=l[j: i]
+      subset.sort()
+      if len(subset)>=min_cols:
+        lists.append(subset)
+  return lists
+
+
+def get_modulus(num):
+  """
+  Usage: [arg1]:[numeric value]
+  Description: Converts to a positive number
+  Returns: [positive numeric value]
+  """
+  if num>=0:
+    return num
+  else:
+    return -num
 

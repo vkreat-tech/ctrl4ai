@@ -67,9 +67,7 @@ def log_transform(dataset, method='yeojohnson', categorical_threshold=0.3):
   Returns: Dataframe [with all skewed columns normalized using appropriate approach]
   """
     for col in dataset.columns:
-        if helper.check_categorical_col(dataset[col],
-                                        categorical_threshold=categorical_threshold) == False and helper.check_numeric_col(
-                dataset[col]) and np.abs(scipy.stats.skew(dataset[col])) > 1:
+        if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold) == False and helper.check_numeric_col(dataset[col]) and np.abs(scipy.stats.skew(dataset[col])) > 1:
             print('Log Normalization(' + method + ') applied for ' + col)
             if method == 'yeojohnson':
                 dataset[col] = dataset[col].apply(lambda x: helper.yeojohnsonlog(x))
@@ -79,16 +77,16 @@ def log_transform(dataset, method='yeojohnson', categorical_threshold=0.3):
 
 
 def drop_null_fields(dataset,
-                     dropna_threshold=0.7):
+                     dropna_threshold=0.7, ignore_cols=[]):
     """
-  Usage: [arg1]:[pandas dataframe],[dropna_threshold(default=0.7)]:[What percentage of nulls should account for the column top be removed]
+  Usage: [arg1]:[pandas dataframe],[dropna_threshold(default=0.7)]:[What percentage of nulls should account for the column top be removed],[ignore_cols]:[columnd that shouldn't be dropped]
   Description: Drop columns that has more null values
   Returns: Dataframe [with null dominated columns removed]
   """
     no_of_records = dataset.shape[0]
     select_cols = []
     for index, val in dataset.isnull().sum().items():
-        if val / no_of_records < dropna_threshold:
+        if val / no_of_records < dropna_threshold or index in ignore_cols:
             select_cols.append(index)
         else:
             print('Dropping null dominated column(s) ' + index)
@@ -232,7 +230,7 @@ def auto_remove_outliers(dataset,
     for col in dataset.columns:
         if helper.check_categorical_col(dataset[col],
                                         categorical_threshold=categorical_threshold) == False and helper.check_numeric_col(
-                dataset[col]) == True:
+            dataset[col]) == True:
             continuous_columns.append(col)
     dataset = remove_outlier_df(dataset, continuous_columns)
     return dataset
@@ -264,14 +262,14 @@ def get_ordinal_encoded_df(dataset):
     """
     column_labels = dict()
     for col in dataset:
-        result,mapper=helper.check_ordinal_col(dataset[col])
+        result, mapper = helper.check_ordinal_col(dataset[col])
         if result:
-            dataset[col]=dataset[col].astype(str).map(mapper)
+            dataset[col] = dataset[col].astype(str).map(mapper)
             mode_val = dataset[col].mode()[0]
-            dataset[col]=dataset[col].fillna(mode_val).astype('int')
+            dataset[col] = dataset[col].fillna(mode_val).astype('int')
             column_labels[col] = mapper
             print('Labels for ' + col + ': ' + str(mapper))
-    return column_labels,dataset
+    return column_labels, dataset
 
 
 def cramersv_corr(x, y):
@@ -294,7 +292,7 @@ def cramersv_corr(x, y):
 def kendalltau_corr(x, y):
     """
   Usage: [arg1]:[continuous series],[arg2]:[categorical series]
-  Description: Kendall Tau Correlation is a measure of association between a continuous variable and a categorical variable
+  Description: Kendall Tau Correlation is a measure of association between a continuous feature and a categorical feature
   Returns: A value between -1 and +1
   """
     x_arr = np.array(impute_nulls(pd.DataFrame(x)))
@@ -306,7 +304,7 @@ def kendalltau_corr(x, y):
 def pearson_corr(x, y):
     """
   Usage: [arg1]:[continuous series],[arg2]:[continuous series]
-  Description: Pearson Correlation is a measure of association between two continuous variables
+  Description: Pearson Correlation is a measure of association between two continuous features
   Returns: A value between -1 and +1
   """
     x = pd.to_numeric(x)
@@ -314,54 +312,105 @@ def pearson_corr(x, y):
     return np.corrcoef(x, y)[0, 1]
 
 
+def nominal_scale_corr(nominal_series, continuous_series):
+    """
+  Usage: [arg1]:[nominal series],[arg2]:[continuous series]
+  Description: Ctrl4AI's Nominal Scale Correlation is a measure of association between a nominal feature and a continuous feature
+  Returns: A value between 0 and 1
+  """
+    len_nominal = len(nominal_series.unique())
+    best_corr=0
+    for bin_size in ['even', 'distributed']:
+        for bins in [None, len_nominal]:
+            binned_series = binning(continuous_series, bin_size=bin_size, bins=bins)
+            corr_val = cramersv_corr(nominal_series, binned_series)
+            if corr_val>best_corr:
+                best_corr=corr_val
+    return best_corr
+
+
 def get_correlated_features(dataset,
                             target_col,
                             target_type,
-                            categorical_threshold=0.3):
+                            correlation_threshold=None,
+                            categorical_threshold=0.3,
+                            define_continuous_cols=[],
+                            define_nominal_cols=[],
+                            define_ordinal_cols=[]):
     """
-  Usage: [arg1]:[pandas dataframe],[arg2]:[target/dependent variable],[arg3]:['continuous'/'categorical'],,[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
+  Usage: [arg1]:[pandas dataframe],[arg2]:[target/dependent variable],[arg3]:['continuous'/'categorical'],[correlation_threshold(default=2/sqrt(dataset.shape[0]))]:[The threshold value for a good correlation],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
   Description: Only for supervised learning to select independent variables that has some correlation with target/dependent variable (Uses Pearson correlation between two continuous variables, CramersV correlation between two categorical variables, Kendalls Tau correlation between a categorical and a continuos variable)
   Returns: Dictionary of correlation coefficients, List of columns that have considerable correlation
   """
-    categorical_cols = []
+    nominal_cols = []
+    ordinal_cols = []
     continuous_cols = []
+    nominal_cols.extend(define_nominal_cols)
+    ordinal_cols.extend(define_ordinal_cols)
+    continuous_cols.extend(define_continuous_cols)
     col_corr = dict()
+    if correlation_threshold is None:
+        correlation_threshold = 2 / np.sqrt(dataset.shape[0])
     for col in dataset:
-        if col != target_col:
-            if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold):
-                categorical_cols.append(col)
-            elif helper.check_numeric_col(dataset[col]):
-                continuous_cols.append(col)
+        if col not in nominal_cols+continuous_cols+ordinal_cols:
+            if col != target_col:
+                if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold):
+                    nominal_cols.append(col)
+                elif helper.check_numeric_col(dataset[col]):
+                    continuous_cols.append(col)
     if target_type == 'continuous':
         for col in continuous_cols:
             coeff = pearson_corr(dataset[col], dataset[target_col])
             col_corr[col] = coeff
-        for col in categorical_cols:
+        for col in ordinal_cols:
             coeff = kendalltau_corr(dataset[col], dataset[target_col])
+            col_corr[col] = coeff
+        for col in nominal_cols:
+            coeff = nominal_scale_corr(dataset[col], dataset[target_col])
             col_corr[col] = coeff
     if target_type == 'categorical':
         for col in continuous_cols:
             coeff = kendalltau_corr(dataset[col], dataset[target_col])
             col_corr[col] = coeff
-        for col in categorical_cols:
+        for col in ordinal_cols+nominal_cols:
             coeff = cramersv_corr(dataset[col], dataset[target_col])
             col_corr[col] = coeff
     selected_features = []
     for col in col_corr.keys():
-        if float(col_corr[col]) > np.abs(2 / np.sqrt(dataset.shape[0])):
+        if np.abs(float(col_corr[col])) > np.abs(correlation_threshold):
             selected_features.append(col)
     return col_corr, selected_features
 
 
-def binning(pdSeries, bin_size='Even'):
+def binning(pdSeries, bin_size='even', bins=None):
     """
-  Usage: [arg1]:[Pandas Series],[bin_size]:[even/distributed]
+  Usage: [arg1]:[Pandas Series],[bin_size(default=even)]:[even/distributed]
   Description: Will split to intervals of equal size of bin size is even. Otherwise, data will be distributed to variable bin sizes with more or less same frequency of data
   Returns: Pandas Series with Values converted to Intervals
   """
-    bins = helper.freedman_diaconis(pdSeries, returnas='bins')
+    if bins is None:
+        bins = helper.freedman_diaconis(pdSeries, returnas='bins')
     if str.lower(bin_size) == 'even':
         new_pdSeries = pd.cut(pdSeries, bins=bins)
     else:
         new_pdSeries = pd.qcut(pdSeries, q=bins, duplicates='drop')
     return new_pdSeries
+
+
+def multicollinearity_check(corr_df,threshold=0.7):
+    """
+    Usage: [arg1]:[Correlation Result DataFrame],[threshold(default=0.7)]:[Value in the range of 0-1]
+    Description: Will split to intervals of equal size of bin size is even. Otherwise, data will be distributed to variable bin sizes with more or less same frequency of data
+    Returns: Pandas Series with Values converted to Intervals
+    """
+    result_set=[]
+    for col in corr_df.columns:
+        for row in corr_df[col].index:
+            if col!=row:
+                val=corr_df[col][row]
+                if helper.get_modulus(val)>=threshold:
+                    cols=[col,row]
+                    cols.sort()
+                    if (cols,val) not in result_set:
+                        result_set.append((cols,val))
+    return result_set
