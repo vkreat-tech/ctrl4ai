@@ -282,13 +282,13 @@ class Preprocessor:
     derive_from_datetime = True
     ohe_ignore_cols = []
     feature_selection = True
-    define_continuous_cols = []
-    define_ordinal_cols = []
-    define_nominal_cols = []
     ordinal_dict = dict()
     artifact = dict()
     col_labels = dict()
     feature_selection_threshold = None
+    ordinal_cols = []
+    nominal_cols = []
+    continuous_cols = []
 
     def __init__(self,
                  dataset,
@@ -328,14 +328,14 @@ class Preprocessor:
         self.feature_selection_threshold = threshold
 
     def set_continuous_columns(self, continuous_cols):
-        self.define_continuous_cols = continuous_cols
+        self.continuous_cols = continuous_cols
 
     def set_nominal_columns(self, categorical_cols):
-        self.define_nominal_cols = categorical_cols
+        self.nominal_cols = categorical_cols
 
     def set_ordinal_dict(self, ordinal_dict):
         self.ordinal_dict = ordinal_dict
-        self.define_ordinal_cols.extend(list(ordinal_dict.keys()))
+        self.ordinal_cols.extend(list(ordinal_dict.keys()))
         self.col_labels.update(ordinal_dict)
 
     def get_preprocessor_artifact(self, path):
@@ -374,21 +374,26 @@ class Preprocessor:
         # drop all single valued columns
         self.dataset = prepdata.drop_single_valued_cols(self.dataset)
 
+        self.dataset = prepdata.custom_ordinal_mapper(self.dataset, self.ordinal_dict)
+
         # transform ordinal columns to integer values
-        self.ordinal_labels, self.dataset = prepdata.get_ordinal_encoded_df(self.dataset)
+        ordinal_labels, self.dataset = prepdata.get_ordinal_encoded_df(self.dataset)
+        self.col_labels.update(ordinal_labels)
+        self.ordinal_cols.extend([col for col in self.ordinal_labels.keys() if col != self.target_variable])
 
-        self.col_labels.update(self.ordinal_labels)
-        self.ordinal_cols = [col for col in self.ordinal_labels.keys() if col != self.target_variable]
+        for col in self.dataset:
+            if col != self.target_variable:
+                if helper.check_categorical_col(self.dataset[col], categorical_threshold=self.categorical_threshold) and col not in self.ordinal_cols+self.nominal_cols+self.continuous_cols:
+                    self.nominal_cols.append(col)
+                elif helper.check_numeric_col(self.dataset[col]) and col not in self.ordinal_cols+self.nominal_cols+self.continuous_cols:
+                    self.continuous_cols.append(col)
+
+        self.ordinal_cols = list(set(self.ordinal_cols))
+        self.nominal_cols = list(set(self.nominal_cols))
+        self.continuous_cols = list(set(self.continuous_cols))
+
         print('Columns identified as ordinal are ' + ','.join(self.ordinal_cols))
-        reserved_cols = []
-        reserved_cols.extend(define_continuous_cols)
-        reserved_cols.extend(define_categorical_cols)
-        reserved_cols.extend(ordinal_cols)
+        print('Columns identified as nominal are ' + ','.join(self.nominal_cols))
+        print('Columns identified as continuous are ' + ','.join(self.continuous_cols))
 
-        # split nominal and continuous variables
-        continuous_cols = []
-        categorical_cols.extend(ordinal_cols)
-        categorical_cols.extend(define_categorical_cols)
-        continuous_cols.extend(define_continuous_cols)
-        categorical_cols = list(set(categorical_cols))
-        continuous_cols = list(set(continuous_cols))
+
