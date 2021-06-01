@@ -270,6 +270,20 @@ def get_ordinal_encoded_df(dataset):
     return column_labels, dataset
 
 
+def custom_ordinal_mapper(dataset, ordinal_dict):
+    """
+    Usage: [arg1]:[pandas dataframe],[arg2]:[Pre-defined ordinal scale dictionary]
+    Description: Replaces ordinal columns with the respective scales
+    Returns: Dataframe [with ordinal values converted to number]
+    """
+    for col in dataset:
+        if col in ordinal_dict.keys():
+            dataset[col] = dataset[col].astype(str).map(ordinal_dict[col])
+            mode_val = dataset[col].mode()[0]
+            dataset[col] = dataset[col].fillna(mode_val).astype('int')
+    return dataset
+
+
 def cramersv_corr(x, y):
     """
     Usage: [arg1]:[categorical series],[arg2]:[categorical series]

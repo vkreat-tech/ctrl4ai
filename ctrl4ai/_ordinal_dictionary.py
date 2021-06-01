@@ -30,6 +30,3 @@ def _get_possible_scales(count):
         if len(each_scale) == count:
             possible_scales.append(each_scale)
     return possible_scales
-
-
-
