@@ -1,6 +1,6 @@
 
 
-_likert_samples=[
+_likert_samples = [
     {'strongly disagree': 0, 'disagree': 1, 'undecided': 2, 'agree': 3, 'strongly agree': 4},
     {'disagree strongly': 0, 'disagree moderately': 1, 'disagree slightly': 2, 'agree slightly': 3, 'agree moderately': 4, 'agree strongly': 5},
     {'disagree': 0, 'undecided': 1, 'agree': 2},
@@ -25,9 +25,9 @@ _likert_samples=[
 
 
 def _get_possible_scales(count):
-    possible_scales=[]
+    possible_scales = []
     for each_scale in _likert_samples:
-        if len(each_scale)==count:
+        if len(each_scale) == count:
             possible_scales.append(each_scale)
     return possible_scales
 

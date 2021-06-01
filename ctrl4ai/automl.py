@@ -136,7 +136,7 @@ def preprocess(dataset,
     # impute nulls in continuous features using choosen method
     continuous_dataset=prepdata.impute_nulls(continuous_dataset,method=impute_null_method)
     
-    # does log transform based on the choosen method if opted
+    # does log transform based on the chosen method if opted
     if log_transform is not None:
         continuous_dataset=prepdata.log_transform(method=log_transform,categorical_threshold=categorical_threshold)
         

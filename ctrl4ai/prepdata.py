@@ -10,10 +10,10 @@ import numpy as np
 import pandas as pd
 from sklearn.impute import KNNImputer
 
-pd.set_option('mode.chained_assignment', None)
-
 from . import helper
 from . import exceptions
+
+pd.set_option('mode.chained_assignment', None)
 
 
 def get_distance(dataset,
@@ -22,9 +22,9 @@ def get_distance(dataset,
                  end_latitude,
                  end_longitude):
     """
-  Usage: [arg1]:[Pandas DataFrame],[arg2]:[column-start_latitude],[arg3]:[column-start_longitude],[arg4]:[column-end_latitude],[arg5]:[column-end_longitude]
-  Returns: DataFrame with additional column [Distance in kilometers]
-  """
+    Usage: [arg1]:[Pandas DataFrame],[arg2]:[column-start_latitude],[arg3]:[column-start_longitude],[arg4]:[column-end_latitude],[arg5]:[column-end_longitude]
+    Returns: DataFrame with additional column [Distance in kilometers]
+    """
     print(
         "This module (ctrl4ai.preprocessing) will be deprecated by the end of 2021. Please plan to switch to the same functions in ")
     dataset['kms_' + start_latitude + '_' + end_latitude] = dataset.apply(
@@ -37,20 +37,20 @@ def get_timediff(dataset,
                  start_time,
                  end_time):
     """
-  Usage: [arg1]:[Pandas DataFrame],[arg2]:[column-start_time],[arg3]:[column-end_time]
-  Returns: DataFrame with additional column [Duration in seconds]
-  """
+    Usage: [arg1]:[Pandas DataFrame],[arg2]:[column-start_time],[arg3]:[column-end_time]
+    Returns: DataFrame with additional column [Duration in seconds]
+    """
     dataset['secs_diff_' + start_time + '_' + end_time] = (dataset[end_time] - dataset[start_time]).dt.total_seconds()
     return dataset
 
 
 def derive_from_datetime(dataset):
     """
-  Usage: [arg1]:[pandas dataframe]
-  Prerequisite: Type for datetime columns to be defined correctly
-  Description: Derives the hour, weekday, year and month from a datetime column
-  Returns: Dataframe [with new columns derived from datetime columns]
-  """
+    Usage: [arg1]:[pandas dataframe]
+    Prerequisite: Type for datetime columns to be defined correctly
+    Description: Derives the hour, weekday, year and month from a datetime column
+    Returns: Dataframe [with new columns derived from datetime columns]
+    """
     for column, dtype in dataset.dtypes.items():
         if 'datetime' in str(dtype):
             dataset['hour_of_' + column] = dataset[column].apply(lambda x: x.hour)
@@ -62,10 +62,10 @@ def derive_from_datetime(dataset):
 
 def log_transform(dataset, method='yeojohnson', categorical_threshold=0.3):
     """
-  Usage: [arg1]:[pandas dataframe],[method]=['yeojohnson'/'added_constant']
-  Description: Checks if the a continuous column is skewed and does log transformation
-  Returns: Dataframe [with all skewed columns normalized using appropriate approach]
-  """
+    Usage: [arg1]:[pandas dataframe],[method]=['yeojohnson'/'added_constant']
+    Description: Checks if the a continuous column is skewed and does log transformation
+    Returns: Dataframe [with all skewed columns normalized using appropriate approach]
+    """
     for col in dataset.columns:
         if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold) == False and helper.check_numeric_col(dataset[col]) and np.abs(scipy.stats.skew(dataset[col])) > 1:
             print('Log Normalization(' + method + ') applied for ' + col)
@@ -79,10 +79,10 @@ def log_transform(dataset, method='yeojohnson', categorical_threshold=0.3):
 def drop_null_fields(dataset,
                      dropna_threshold=0.7, ignore_cols=[]):
     """
-  Usage: [arg1]:[pandas dataframe],[dropna_threshold(default=0.7)]:[What percentage of nulls should account for the column top be removed],[ignore_cols]:[columnd that shouldn't be dropped]
-  Description: Drop columns that has more null values
-  Returns: Dataframe [with null dominated columns removed]
-  """
+    Usage: [arg1]:[pandas dataframe],[dropna_threshold(default=0.7)]:[What percentage of nulls should account for the column top be removed],[ignore_cols]:[columnd that shouldn't be dropped]
+    Description: Drop columns that has more null values
+    Returns: Dataframe [with null dominated columns removed]
+    """
     no_of_records = dataset.shape[0]
     select_cols = []
     for index, val in dataset.isnull().sum().items():
@@ -95,10 +95,10 @@ def drop_null_fields(dataset,
 
 def drop_single_valued_cols(dataset):
     """
-  Usage: [arg1]:[pandas dataframe]
-  Description: Drop columns that has only one value in it
-  Returns: Dataframe [without single valued columns]
-  """
+    Usage: [arg1]:[pandas dataframe]
+    Description: Drop columns that has only one value in it
+    Returns: Dataframe [without single valued columns]
+    """
     single_valued_cols = []
     for col in dataset.columns:
         if helper.single_valued_col(dataset[col]):
@@ -114,11 +114,11 @@ def get_ohe_df(dataset,
                ignore_cols=[],
                categorical_threshold=0.3):
     """
-  Usage: [arg1]:[pandas dataframe],[target_variable(default=None)]:[Dependent variable for Regression/Classification],[ignore_cols]:[categorical columns where one hot encoding need not be done],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
-  Description: Auto identifies categorical features in the dataframe and does one hot encoding
-  Note: Consumes more system mermory if the size of the dataset is huge
-  Returns: Dataframe [with separate column for each categorical values]
-  """
+    Usage: [arg1]:[pandas dataframe],[target_variable(default=None)]:[Dependent variable for Regression/Classification],[ignore_cols]:[categorical columns where one hot encoding need not be done],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
+    Description: Auto identifies categorical features in the dataframe and does one hot encoding
+    Note: Consumes more system mermory if the size of the dataset is huge
+    Returns: Dataframe [with separate column for each categorical values]
+    """
     for col in dataset.columns:
         if helper.check_categorical_col(dataset[col],
                                         categorical_threshold=categorical_threshold) and col != target_variable and col not in ignore_cols:
@@ -129,10 +129,10 @@ def get_ohe_df(dataset,
 
 def drop_non_numeric(dataset):
     """
-  Usage: [arg1]:[pandas dataframe]
-  Description: Drop columns that are not numeric
-  Returns: Dataframe [only numeric features]
-  """
+    Usage: [arg1]:[pandas dataframe]
+    Description: Drop columns that are not numeric
+    Returns: Dataframe [only numeric features]
+    """
     drop_cols = []
     for col in dataset.columns:
         if helper.check_numeric_col(dataset[col]) == False:
@@ -146,11 +146,11 @@ def drop_non_numeric(dataset):
 def impute_nulls(dataset,
                  method='central_tendency'):
     """
-  Usage: [arg1]:[pandas dataframe],[method(default=central_tendency)]:[Choose either central_tendency or KNN]
-  Description: Auto identifies the type of distribution in the column and imputes null values
-  Note: KNN consumes more system mermory if the size of the dataset is huge
-  Returns: Dataframe [with separate column for each categorical values]
-  """
+    Usage: [arg1]:[pandas dataframe],[method(default=central_tendency)]:[Choose either central_tendency or KNN]
+    Description: Auto identifies the type of distribution in the column and imputes null values
+    Note: KNN consumes more system mermory if the size of the dataset is huge
+    Returns: Dataframe [with separate column for each categorical values]
+    """
     if str.lower(method) == 'knn':
         k_knn = int(np.ceil(np.sqrt(dataset.shape[0])))
         if k_knn % 2 == 0:
@@ -184,10 +184,10 @@ def impute_nulls(dataset,
 def label_encode(dataset,
                  col):
     """
-  Usage: [arg1]:[pandas dataframe],[arg1]:[column to be encoded]
-  Description: Labelling categorical features with numbers from 0 to n categories
-  Returns: Label Dict , Dataframe
-  """
+    Usage: [arg1]:[pandas dataframe],[arg1]:[column to be encoded]
+    Description: Labelling categorical features with numbers from 0 to n categories
+    Returns: Label Dict , Dataframe
+    """
     mode_val = dataset[col].mode()[0]
     dataset[col] = dataset[col].apply(lambda x: str(x).strip()).astype(str).fillna(mode_val)
     label_dict = dict(zip(dataset[col].unique(), np.arange(dataset[col].unique().shape[0])))
@@ -200,10 +200,10 @@ def label_encode(dataset,
 def remove_outlier_df(dataset,
                       cols):
     """
-  Usage: [arg1]:[pandas dataframe],[arg2]:[list of columns to check and remove outliers]
-  Description: The column needs to be continuous
-  Returns: DataFrame with outliers removed for the specific columns
-  """
+    Usage: [arg1]:[pandas dataframe],[arg2]:[list of columns to check and remove outliers]
+    Description: The column needs to be continuous
+    Returns: DataFrame with outliers removed for the specific columns
+    """
     for col in cols:
         outlier_temp_dataset = pd.DataFrame(dataset[col])
         outlier_temp_dataset = impute_nulls(outlier_temp_dataset)
@@ -222,15 +222,13 @@ def auto_remove_outliers(dataset,
                          ignore_cols=[],
                          categorical_threshold=0.3):
     """
-  Usage: [arg1]:[pandas dataframe],[ignore_cols]:[list of columns to be ignored],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
-  Description: Checks if the column is continuous and removes outliers
-  Returns: DataFrame with outliers removed
-  """
+    Usage: [arg1]:[pandas dataframe],[ignore_cols]:[list of columns to be ignored],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
+    Description: Checks if the column is continuous and removes outliers
+    Returns: DataFrame with outliers removed
+    """
     continuous_columns = []
     for col in dataset.columns:
-        if helper.check_categorical_col(dataset[col],
-                                        categorical_threshold=categorical_threshold) == False and helper.check_numeric_col(
-            dataset[col]) == True:
+        if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold) == False and helper.check_numeric_col(dataset[col]) == True:
             continuous_columns.append(col)
     dataset = remove_outlier_df(dataset, continuous_columns)
     return dataset
@@ -239,10 +237,10 @@ def auto_remove_outliers(dataset,
 def get_label_encoded_df(dataset,
                          categorical_threshold=0.3):
     """
-  Usage: [arg1]:[pandas dataframe],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
-  Description: Auto identifies categorical features in the dataframe and does label encoding
-  Returns: Dictionary [Labels for columns],Dataframe [with separate column for each categorical values]
-  """
+    Usage: [arg1]:[pandas dataframe],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
+    Description: Auto identifies categorical features in the dataframe and does label encoding
+    Returns: Dictionary [Labels for columns],Dataframe [with separate column for each categorical values]
+    """
     column_labels = dict()
     for col in dataset.columns:
         if helper.check_numeric_col(dataset[col]):
@@ -274,10 +272,10 @@ def get_ordinal_encoded_df(dataset):
 
 def cramersv_corr(x, y):
     """
-  Usage: [arg1]:[categorical series],[arg2]:[categorical series]
-  Description: Cramer's V Correlation is a measure of association between two categorical variables
-  Returns: A value between 0 and +1
-  """
+    Usage: [arg1]:[categorical series],[arg2]:[categorical series]
+    Description: Cramer's V Correlation is a measure of association between two categorical variables
+    Returns: A value between 0 and +1
+    """
     confusion_matrix = pd.crosstab(x, y)
     chi2 = scipy.stats.chi2_contingency(confusion_matrix)[0]
     n = confusion_matrix.sum().sum()
@@ -291,22 +289,34 @@ def cramersv_corr(x, y):
 
 def kendalltau_corr(x, y):
     """
-  Usage: [arg1]:[continuous series],[arg2]:[categorical series]
-  Description: Kendall Tau Correlation is a measure of association between a continuous feature and a categorical feature
-  Returns: A value between -1 and +1
-  """
+    Usage: [arg1]:[continuous series],[arg2]:[categorical series]
+    Description: Kendall Tau Correlation is a measure of association between a ordinal feature and a ordinal feature
+    Returns: A value between -1 and +1
+    """
     x_arr = np.array(impute_nulls(pd.DataFrame(x)))
     y_arr = np.array(impute_nulls(pd.DataFrame(y)))
     corr, _ = scipy.stats.kendalltau(x_arr, y_arr)
     return corr
 
 
+def spearmans_corr(x, y):
+    """
+    Usage: [arg1]:[continuous series],[arg2]:[categorical series]
+    Description: Spearman Correlation is a measure of association between a continuous feature and a ordinal/continuous feature with monotonic relationship
+    Returns: A value between -1 and +1
+    """
+    x_arr = np.array(impute_nulls(pd.DataFrame(x)))
+    y_arr = np.array(impute_nulls(pd.DataFrame(y)))
+    corr, _ = scipy.stats.spearmanr(x_arr, y_arr)
+    return corr
+
+
 def pearson_corr(x, y):
     """
-  Usage: [arg1]:[continuous series],[arg2]:[continuous series]
-  Description: Pearson Correlation is a measure of association between two continuous features
-  Returns: A value between -1 and +1
-  """
+    Usage: [arg1]:[continuous series],[arg2]:[continuous series]
+    Description: Pearson Correlation is a measure of association between two continuous features
+    Returns: A value between -1 and +1
+    """
     x = pd.to_numeric(x)
     y = pd.to_numeric(y)
     return np.corrcoef(x, y)[0, 1]
@@ -314,10 +324,12 @@ def pearson_corr(x, y):
 
 def nominal_scale_corr(nominal_series, continuous_series):
     """
-  Usage: [arg1]:[nominal series],[arg2]:[continuous series]
-  Description: Ctrl4AI's Nominal Scale Correlation is a measure of association between a nominal feature and a continuous feature
-  Returns: A value between 0 and 1
-  """
+    Usage: [arg1]:[nominal series],[arg2]:[continuous series]
+    Description: Ctrl4AI's Nominal Scale Correlation is a measure of association between a nominal feature and a continuous feature
+    Returns: A value between 0 and 1
+    """
+    mean_val = continuous_series.mean()
+    continuous_series = continuous_series.fillna(mean_val)
     len_nominal = len(nominal_series.unique())
     best_corr=0
     for bin_size in ['even', 'distributed']:
@@ -338,10 +350,10 @@ def get_correlated_features(dataset,
                             define_nominal_cols=[],
                             define_ordinal_cols=[]):
     """
-  Usage: [arg1]:[pandas dataframe],[arg2]:[target/dependent variable],[arg3]:['continuous'/'categorical'],[correlation_threshold(default=2/sqrt(dataset.shape[0]))]:[The threshold value for a good correlation],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
-  Description: Only for supervised learning to select independent variables that has some correlation with target/dependent variable (Uses Pearson correlation between two continuous variables, CramersV correlation between two categorical variables, Kendalls Tau correlation between a categorical and a continuos variable)
-  Returns: Dictionary of correlation coefficients, List of columns that have considerable correlation
-  """
+    Usage: [arg1]:[pandas dataframe],[arg2]:[target/dependent variable],[arg3]:['continuous'/'categorical'],[correlation_threshold(default=2/sqrt(dataset.shape[0]))]:[The threshold value for a good correlation],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
+    Description: Only for supervised learning to select independent variables that has some correlation with target/dependent variable (Uses Pearson correlation between two continuous variables, CramersV correlation between two categorical variables, Kendalls Tau correlation between a categorical and a continuos variable)
+    Returns: Dictionary of correlation coefficients, List of columns that have considerable correlation
+    """
     nominal_cols = []
     ordinal_cols = []
     continuous_cols = []
