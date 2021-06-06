@@ -67,7 +67,9 @@ def log_transform(dataset, method='yeojohnson', categorical_threshold=0.3):
     Returns: Dataframe [with all skewed columns normalized using appropriate approach]
     """
     for col in dataset.columns:
-        if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold) == False and helper.check_numeric_col(dataset[col]) and np.abs(scipy.stats.skew(dataset[col])) > 1:
+        if helper.check_categorical_col(dataset[col],
+                                        categorical_threshold=categorical_threshold) == False and helper.check_numeric_col(
+                dataset[col]) and np.abs(scipy.stats.skew(dataset[col])) > 1:
             print('Log Normalization(' + method + ') applied for ' + col)
             if method == 'yeojohnson':
                 dataset[col] = dataset[col].apply(lambda x: helper.yeojohnsonlog(x))
@@ -111,7 +113,9 @@ def drop_single_valued_cols(dataset):
 
 def get_ohe_df(dataset,
                target_variable=None,
+               define_nominal_cols=[],
                ignore_cols=[],
+               drop_first=True,
                categorical_threshold=0.3):
     """
     Usage: [arg1]:[pandas dataframe],[target_variable(default=None)]:[Dependent variable for Regression/Classification],[ignore_cols]:[categorical columns where one hot encoding need not be done],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
@@ -119,11 +123,16 @@ def get_ohe_df(dataset,
     Note: Consumes more system mermory if the size of the dataset is huge
     Returns: Dataframe [with separate column for each categorical values]
     """
+    nominal_cols = []
+    nominal_cols.extend(define_nominal_cols)
+    for col in dataset:
+        if col not in nominal_cols+ignore_cols and col != target_variable :
+            if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold):
+                nominal_cols.append(col)
     for col in dataset.columns:
-        if helper.check_categorical_col(dataset[col],
-                                        categorical_threshold=categorical_threshold) and col != target_variable and col not in ignore_cols:
+        if col in nominal_cols and col not in ignore_cols:
             print('One hot encoding ' + col)
-            dataset = helper.one_hot_encoding(dataset, [col])
+            dataset = helper.one_hot_encoding(dataset, [col], drop_first=drop_first)
     return dataset
 
 
@@ -144,13 +153,29 @@ def drop_non_numeric(dataset):
 
 
 def impute_nulls(dataset,
-                 method='central_tendency'):
+                 method='central_tendency',
+                 define_continuous_cols=[],
+                 define_nominal_cols=[],
+                 define_ordinal_cols=[],
+                 categorical_threshold=0.3):
     """
     Usage: [arg1]:[pandas dataframe],[method(default=central_tendency)]:[Choose either central_tendency or KNN]
     Description: Auto identifies the type of distribution in the column and imputes null values
-    Note: KNN consumes more system mermory if the size of the dataset is huge
+    Note: KNN consumes more system memory if the size of the dataset is huge
     Returns: Dataframe [with separate column for each categorical values]
     """
+    nominal_cols = []
+    ordinal_cols = []
+    continuous_cols = []
+    nominal_cols.extend(define_nominal_cols)
+    continuous_cols.extend(define_continuous_cols)
+    ordinal_cols.extend(define_ordinal_cols)
+    for col in dataset:
+        if col not in nominal_cols + ordinal_cols + continuous_cols:
+            if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold):
+                nominal_cols.append(col)
+            elif helper.check_numeric_col(dataset[col]):
+                continuous_cols.append(col)
     if str.lower(method) == 'knn':
         k_knn = int(np.ceil(np.sqrt(dataset.shape[0])))
         if k_knn % 2 == 0:
@@ -162,11 +187,11 @@ def impute_nulls(dataset,
     elif method == 'central_tendency':
         for col, value in dataset.isnull().sum().items():
             if value > 0:
-                if helper.check_categorical_col(dataset[col]):
+                if col in nominal_cols + ordinal_cols:
                     print("Replaced nulls in " + col + " with mode")
                     mode_val = dataset[col].mode()[0]
                     dataset[col] = dataset[col].fillna(mode_val)
-                elif helper.check_numeric_col(dataset[col]):
+                elif col in continuous_cols:
                     if np.abs(scipy.stats.skew(dataset[col])) > 1:
                         print("Replaced nulls in " + col + " with median")
                         median_val = dataset[col].median()
@@ -177,8 +202,7 @@ def impute_nulls(dataset,
                         dataset[col] = dataset[col].fillna(mean_val)
         return dataset
     else:
-        print('Method should be either central_tendency or knn')
-        raise exceptions.ParameterError
+        raise exceptions.ParameterError('Method should be either central_tendency or knn')
 
 
 def label_encode(dataset,
@@ -189,7 +213,8 @@ def label_encode(dataset,
     Returns: Label Dict , Dataframe
     """
     mode_val = dataset[col].mode()[0]
-    dataset[col] = dataset[col].apply(lambda x: str(x).strip()).astype(str).fillna(mode_val)
+    # dataset[col] = dataset[col].apply(lambda x: str(x).strip()).astype(str).fillna(mode_val)
+    dataset[col] = dataset[col].fillna(mode_val)
     label_dict = dict(zip(dataset[col].unique(), np.arange(dataset[col].unique().shape[0])))
     dataset = dataset.replace({col: label_dict})
     dataset[col] = dataset[col].astype('int')
@@ -220,68 +245,73 @@ def remove_outlier_df(dataset,
 
 def auto_remove_outliers(dataset,
                          ignore_cols=[],
-                         categorical_threshold=0.3):
+                         categorical_threshold=0.3,
+                         define_continuous_cols=[]):
     """
     Usage: [arg1]:[pandas dataframe],[ignore_cols]:[list of columns to be ignored],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
     Description: Checks if the column is continuous and removes outliers
     Returns: DataFrame with outliers removed
     """
     continuous_columns = []
-    for col in dataset.columns:
-        if helper.check_categorical_col(dataset[col],categorical_threshold=categorical_threshold) == False and helper.check_numeric_col(dataset[col]) == True:
+    for col in define_continuous_cols:
+        if col not in ignore_cols:
             continuous_columns.append(col)
+    for col in dataset.columns:
+        if col not in continuous_columns+ignore_cols:
+            if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold) == False and helper.check_numeric_col(dataset[col]) == True:
+                continuous_columns.append(col)
     dataset = remove_outlier_df(dataset, continuous_columns)
     return dataset
 
 
 def get_label_encoded_df(dataset,
-                         categorical_threshold=0.3):
+                         categorical_threshold=0.3,
+                         define_nominal_cols=[],
+                         ignore_cols=[]):
     """
     Usage: [arg1]:[pandas dataframe],[categorical_threshold(default=0.3)]:[Threshold for determining categorical column based on the percentage of unique values(optional)]
     Description: Auto identifies categorical features in the dataframe and does label encoding
     Returns: Dictionary [Labels for columns],Dataframe [with separate column for each categorical values]
     """
+    nominal_cols = []
+    nominal_cols.extend(define_nominal_cols)
+    for col in dataset:
+        if col not in nominal_cols+ignore_cols:
+            if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold):
+                nominal_cols.append(col)
     column_labels = dict()
     for col in dataset.columns:
-        if helper.check_numeric_col(dataset[col]):
-            pass
-        elif helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold):
-            labels, dataset = label_encode(dataset, col)
-            print('Labels for ' + col + ': ' + str(labels))
-            column_labels[col] = labels
+        if col not in ignore_cols:
+            if helper.check_numeric_col(dataset[col]):
+                continue
+            elif col in nominal_cols:
+                labels, dataset = label_encode(dataset, col)
+                print('Labels for ' + col + ': ' + str(labels))
+                column_labels[col] = labels
     return column_labels, dataset
 
 
-def get_ordinal_encoded_df(dataset):
+def get_ordinal_encoded_df(dataset, custom_ordinal_dict=dict()):
     """
-    Usage: [arg1]:[pandas dataframe]
+    Usage: [arg1]:[pandas dataframe],[arg2]:[Pre-defined ordinal scale dictionary]
     Description: Identifies ordinal columns and translate them to numbers
     Returns: Dictionary [Labels for columns], Dataframe [with ordinal values converted to number]
     """
     column_labels = dict()
     for col in dataset:
-        result, mapper = helper.check_ordinal_col(dataset[col])
-        if result:
-            dataset[col] = dataset[col].astype(str).map(mapper)
+        if col in custom_ordinal_dict.keys():
+            dataset[col] = dataset[col].astype(str).map(custom_ordinal_dict[col])
             mode_val = dataset[col].mode()[0]
             dataset[col] = dataset[col].fillna(mode_val).astype('int')
-            column_labels[col] = mapper
-            print('Labels for ' + col + ': ' + str(mapper))
+        else:
+            result, mapper = helper.check_ordinal_col(dataset[col])
+            if result:
+                dataset[col] = dataset[col].astype(str).map(mapper)
+                mode_val = dataset[col].mode()[0]
+                dataset[col] = dataset[col].fillna(mode_val).astype('int')
+                column_labels[col] = mapper
+                print('Labels for ' + col + ': ' + str(mapper))
     return column_labels, dataset
-
-
-def custom_ordinal_mapper(dataset, ordinal_dict):
-    """
-    Usage: [arg1]:[pandas dataframe],[arg2]:[Pre-defined ordinal scale dictionary]
-    Description: Replaces ordinal columns with the respective scales
-    Returns: Dataframe [with ordinal values converted to number]
-    """
-    for col in dataset:
-        if col in ordinal_dict.keys():
-            dataset[col] = dataset[col].astype(str).map(ordinal_dict[col])
-            mode_val = dataset[col].mode()[0]
-            dataset[col] = dataset[col].fillna(mode_val).astype('int')
-    return dataset
 
 
 def cramersv_corr(x, y):
@@ -345,13 +375,13 @@ def nominal_scale_corr(nominal_series, continuous_series):
     mean_val = continuous_series.mean()
     continuous_series = continuous_series.fillna(mean_val)
     len_nominal = len(nominal_series.unique())
-    best_corr=0
+    best_corr = 0
     for bin_size in ['even', 'distributed']:
         for bins in [None, len_nominal]:
             binned_series = binning(continuous_series, bin_size=bin_size, bins=bins)
             corr_val = cramersv_corr(nominal_series, binned_series)
-            if corr_val>best_corr:
-                best_corr=corr_val
+            if corr_val > best_corr:
+                best_corr = corr_val
     return best_corr
 
 
@@ -378,7 +408,7 @@ def get_correlated_features(dataset,
     if correlation_threshold is None:
         correlation_threshold = 2 / np.sqrt(dataset.shape[0])
     for col in dataset:
-        if col not in nominal_cols+continuous_cols+ordinal_cols:
+        if col not in nominal_cols + continuous_cols + ordinal_cols:
             if col != target_col:
                 if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold):
                     nominal_cols.append(col)
@@ -398,7 +428,7 @@ def get_correlated_features(dataset,
         for col in continuous_cols:
             coeff = kendalltau_corr(dataset[col], dataset[target_col])
             col_corr[col] = coeff
-        for col in ordinal_cols+nominal_cols:
+        for col in ordinal_cols + nominal_cols:
             coeff = cramersv_corr(dataset[col], dataset[target_col])
             col_corr[col] = coeff
     selected_features = []
@@ -423,20 +453,71 @@ def binning(pdSeries, bin_size='even', bins=None):
     return new_pdSeries
 
 
-def multicollinearity_check(corr_df,threshold=0.7):
+def multicollinearity_check(corr_df, threshold=0.7):
     """
     Usage: [arg1]:[Correlation Result DataFrame],[threshold(default=0.7)]:[Value in the range of 0-1]
     Description: Will split to intervals of equal size of bin size is even. Otherwise, data will be distributed to variable bin sizes with more or less same frequency of data
     Returns: Pandas Series with Values converted to Intervals
     """
-    result_set=[]
+    result_set = []
     for col in corr_df.columns:
         for row in corr_df[col].index:
-            if col!=row:
-                val=corr_df[col][row]
-                if helper.get_modulus(val)>=threshold:
-                    cols=[col,row]
+            if col != row:
+                val = corr_df[col][row]
+                if helper.get_absolute(val) >= threshold:
+                    cols = [col, row]
                     cols.sort()
-                    if (cols,val) not in result_set:
-                        result_set.append((cols,val))
+                    if (cols, val) not in result_set:
+                        result_set.append((cols, val))
     return result_set
+
+
+def dataset_summary(dataset,
+                    define_continuous_cols=[],
+                    define_nominal_cols=[],
+                    define_ordinal_cols=[],
+                    categorical_threshold=0.3):
+    """
+    Usage: [arg1]:[pandas dataframe]
+    Description: Returns summary of DataFrame
+    Returns: [Summary Dict]
+    """
+    nominal_cols = []
+    ordinal_cols = []
+    continuous_cols = []
+    nominal_cols.extend(define_nominal_cols)
+    continuous_cols.extend(define_continuous_cols)
+    ordinal_cols.extend(define_ordinal_cols)
+    for col in dataset:
+        if col not in nominal_cols + ordinal_cols + continuous_cols:
+            if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold):
+                nominal_cols.append(col)
+            elif helper.check_numeric_col(dataset[col]):
+                continuous_cols.append(col)
+    dataset_summary = dict()
+    for col in ordinal_cols:
+        dataset_summary[col] = dict()
+        dataset_summary[col]['type'] = 'ordinal'
+        col_summary = dataset[col].describe().to_dict()
+        dataset_summary[col].update(col_summary)
+        dataset_summary[col]['mode'] = dataset[col].mode()[0]
+        dataset_summary[col]['min'] = dataset[col].min()
+        dataset_summary[col]['max'] = dataset[col].max()
+    for col in nominal_cols:
+        dataset_summary[col] = dict()
+        dataset_summary[col]['type'] = 'nominal'
+        col_summary = dataset[col].describe().to_dict()
+        dataset_summary[col].update(col_summary)
+        dataset_summary[col]['mode'] = dataset[col].mode()[0]
+    for col in continuous_cols:
+        dataset_summary[col] = dict()
+        dataset_summary[col]['type'] = 'continuous'
+        col_summary = dataset[col].describe().to_dict()
+        dataset_summary[col].update(col_summary)
+        dataset_summary[col]['mean'] = dataset[col].mean()
+        dataset_summary[col]['median'] = dataset[col].median()
+        dataset_summary[col]['min'] = dataset[col].min()
+        dataset_summary[col]['max'] = dataset[col].max()
+        if np.abs(scipy.stats.skew(dataset[col])) > 1:
+            dataset_summary[col]['Skewed'] = 'Y'
+    return dataset_summary

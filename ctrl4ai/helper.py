@@ -178,13 +178,14 @@ def single_valued_col(col_series):
 
 
 def one_hot_encoding(dataset,
-                     categorical_cols_list):
+                     categorical_cols_list,
+                     drop_first=True):
     """
     Usage: [arg1]:[pandas dataframe],[arg2]:[list of columns to be encoded]
     Description: Transformation for categorical features by getting dummies
     Returns: Dataframe [with separate column for each categorical values]
     """
-    dataset = pd.merge(dataset, pd.get_dummies(dataset[categorical_cols_list], columns=categorical_cols_list),
+    dataset = pd.merge(dataset, pd.get_dummies(dataset[categorical_cols_list], columns=categorical_cols_list, drop_first=drop_first),
                        left_index=True, right_index=True)
     dataset = dataset.drop(categorical_cols_list, axis=1)
     return dataset
@@ -242,7 +243,7 @@ def get_columns_subsets(cols, min_cols=1):
     return lists
 
 
-def get_modulus(num):
+def get_absolute(num):
     """
     Usage: [arg1]:[numeric value]
     Description: Converts to a positive number

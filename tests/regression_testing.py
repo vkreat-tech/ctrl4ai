@@ -65,7 +65,7 @@ if labels != expected_labels:
 
 
 # =============================================================================
-# prepdata.custom_ordinal_mapper
+# prepdata.get_ordinal_encoded_df (with custom ordinal mapper)
 # =============================================================================
 
 data = {'level': ['level 0', 'level 1', 'level 2', 'level 3', 'level 3', 'level 2', 'level 1', 'level 0', 'level 1', 'level 2'],
@@ -76,11 +76,13 @@ data = {'level': ['level 0', 'level 1', 'level 2', 'level 3', 'level 3', 'level 
 df = pd.DataFrame(data)
 ordinal_dict = {'level': {'level 0': 0, 'level 1': 1, 'level 2': 2, 'level 3': 3},
                 'grade': {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5}}
-df = prepdata.custom_ordinal_mapper(df, ordinal_dict)
+labels, df = prepdata.get_ordinal_encoded_df(df, ordinal_dict)
 
-expected_dict = {'level': {0: 0, 1: 1, 2: 2, 3: 3, 4: 3, 5: 2, 6: 1, 7: 0, 8: 1, 9: 2}, 'value': {0: 1, 1: 6, 2: 8, 3: 2, 4: 4, 5: 5, 6: 8, 7: 2, 8: 6, 9: 8}, 'eligible': {0: 'yes', 1: 'no', 2: 'yes', 3: 'no', 4: 'yes', 5: 'no', 6: 'yes', 7: 'no', 8: 'yes', 9: 'no'}, 'grade': {0: 0, 1: 1, 2: 2, 3: 0, 4: 1, 5: 2, 6: 0, 7: 1, 8: 2, 9: 0}}
+expected_dict = {'level': {0: 0, 1: 1, 2: 2, 3: 3, 4: 3, 5: 2, 6: 1, 7: 0, 8: 1, 9: 2}, 'value': {0: 1, 1: 6, 2: 8, 3: 2, 4: 4, 5: 5, 6: 8, 7: 2, 8: 6, 9: 8}, 'eligible': {0: 1, 1: 0, 2: 1, 3: 0, 4: 1, 5: 0, 6: 1, 7: 0, 8: 1, 9: 0}, 'grade': {0: 0, 1: 1, 2: 2, 3: 0, 4: 1, 5: 2, 6: 0, 7: 1, 8: 2, 9: 0}}
+
 if df.to_dict() != expected_dict:
     raise TestingError('Error in prepdata.custom_ordinal_mapper')
+
 
 # =============================================================================
 

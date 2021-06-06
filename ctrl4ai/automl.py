@@ -11,8 +11,10 @@ from . import exceptions
 
 import sklearn
 import pandas as pd
+import numpy as np
 from pickle import dump
 from datetime import datetime
+from itertools import combinations
 
 pd.set_option('mode.chained_assignment', None)
 
@@ -58,17 +60,14 @@ def preprocess(dataset,
 
     col_labels = dict()
     if str.lower(learning_type) not in ['supervised', 'unsupervised']:
-        print('learning_type should be supervised/unsupervised')
-        raise exceptions.ParameterError
+        raise exceptions.ParameterError('learning_type should be supervised/unsupervised')
     if str.lower(tranform_categorical) not in ['label_encoding', 'one_hot_encoding']:
-        print('learning_type should be label_encoding/one_hot_encoding')
-        raise exceptions.ParameterError
+        raise exceptions.ParameterError('learning_type should be label_encoding/one_hot_encoding')
     if str.lower(learning_type) == 'supervised' and target_variable is None:
-        print('target_variable is a required parameter for supervised learning')
-        raise exceptions.ParameterError
+        raise exceptions.ParameterError('target_variable is a required parameter for supervised learning')
     if str.lower(learning_type) == 'supervised' and target_type is None:
-        print('target_type (continuous/categorical) is a required parameter for supervised learning')
-        raise exceptions.ParameterError
+        raise exceptions.ParameterError(
+            'target_type (continuous/categorical) is a required parameter for supervised learning')
 
     # resetting the index of the dataset
     dataset = dataset.reset_index(drop=True)
@@ -143,7 +142,8 @@ def preprocess(dataset,
 
     # does log transform based on the chosen method if opted
     if log_transform is not None:
-        continuous_dataset = prepdata.log_transform(method=log_transform, categorical_threshold=categorical_threshold)
+        continuous_dataset = prepdata.log_transform(dataset, method=log_transform,
+                                                    categorical_threshold=categorical_threshold)
 
     # merge datasets
     cleansed_dataset = pd.concat([categorical_dataset, continuous_dataset], axis=1)
@@ -209,9 +209,14 @@ def scale_transform(dataset,
 
 
 def master_correlation(dataset,
-                       categorical_threshold=0.3,
                        define_continuous_cols=[],
-                       define_categorical_cols=[]):
+                       define_nominal_cols=[],
+                       define_ordinal_cols=[],
+                       categorical_threshold=0.3,
+                       impute_nulls=True,
+                       only_target=True,
+                       target_column=None,
+                       target_type=None):
     """
     Usage:
     dataset=pandas DataFrame (required)
@@ -222,31 +227,44 @@ def master_correlation(dataset,
     Description: Auto-detects the type of data. Uses Pearson correlation between two continuous variables, CramersV correlation between two categorical variables, Kendalls Tau correlation between a categorical and a continuos variable
     |
     returns Correlation DataFrame
-    
     """
-    categorical_cols = []
+    if only_target and target_column is None:
+        raise exceptions.ParameterError('target_column is a required parameter if only_target is True')
+    nominal_cols = []
+    ordinal_cols = []
     continuous_cols = []
-    categorical_cols.extend(define_categorical_cols)
+    nominal_cols.extend(define_nominal_cols)
     continuous_cols.extend(define_continuous_cols)
+    ordinal_cols.extend(define_ordinal_cols)
+    if target_type is not None:
+        if target_type == 'continuous' and target_column not in continuous_cols:
+            continuous_cols.append(target_column)
+        elif target_type in ['nominal', 'categorical'] and target_column not in nominal_cols:
+            nominal_cols.append(target_column)
+        elif target_type == 'ordinal' and target_column not in ordinal_cols:
+            ordinal_cols.append(target_column)
+    dataset = prepdata.drop_single_valued_cols(dataset)
     for col in dataset:
-        if col not in categorical_cols + continuous_cols:
+        if col not in nominal_cols + ordinal_cols + continuous_cols:
             if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold):
-                categorical_cols.append(col)
+                nominal_cols.append(col)
             elif helper.check_numeric_col(dataset[col]):
                 continuous_cols.append(col)
 
-    categorical_dataset = dataset[categorical_cols]
+    nominal_dataset = dataset[nominal_cols]
+    ordinal_dataset = dataset[ordinal_cols]
     continuous_dataset = dataset[continuous_cols]
+    print('Columns identified as ordinal are ' + ','.join(ordinal_cols))
+    print('Columns identified as nominal are ' + ','.join(nominal_cols))
+    print('Columns identified as continuous are ' + ','.join(continuous_cols))
+    _, nominal_dataset = prepdata.get_label_encoded_df(nominal_dataset)
 
-    _, categorical_dataset = prepdata.get_label_encoded_df(dataset[categorical_cols])
-
-    data = pd.concat([categorical_dataset, continuous_dataset], axis=1)
-    data = prepdata.drop_single_valued_cols(data)
-    data = prepdata.impute_nulls(data, method='central_tendency')
+    data = pd.concat([nominal_dataset, continuous_dataset, ordinal_dataset], axis=1)
+    if impute_nulls:
+        data = prepdata.impute_nulls(data, method='central_tendency', define_continuous_cols=continuous_cols,
+                                     define_nominal_cols=nominal_cols, define_ordinal_cols=ordinal_cols)
 
     column_list = data.columns
-
-    from itertools import combinations
 
     column_combination = list(combinations(column_list, 2))
 
@@ -256,19 +274,61 @@ def master_correlation(dataset,
         corr_df.loc[col, col] = 1
 
     for comb in column_combination:
+        if only_target and target_column not in comb:
+            continue
         col1 = comb[0]
         col2 = comb[1]
         if col1 in continuous_cols and col2 in continuous_cols:
-            corr_value = prepdata.pearson_corr(data[col1], data[col2])
-        elif col1 in categorical_cols and col2 in categorical_cols:
+            corr_value1 = prepdata.pearson_corr(data[col1], data[col2])
+            corr_value2 = prepdata.spearmans_corr(data[col2], data[col1])
+            corr_value = max([corr_value1, corr_value2])
+        elif col1 in continuous_cols and col2 in nominal_cols:
+            corr_value = prepdata.nominal_scale_corr(data[col2], data[col1])
+        elif col1 in continuous_cols and col2 in ordinal_cols:
+            corr_value = prepdata.spearmans_corr(data[col2], data[col1])
+        elif col1 in nominal_cols and col2 in nominal_cols:
             corr_value = prepdata.cramersv_corr(data[col1], data[col2])
-        elif col1 in continuous_cols and col2 in categorical_cols:
+        elif col1 in nominal_cols and col2 in continuous_cols:
+            corr_value = prepdata.nominal_scale_corr(data[col1], data[col2])
+        elif col1 in nominal_cols and col2 in ordinal_cols:
+            corr_value = prepdata.cramersv_corr(data[col1], data[col2])
+        elif col1 in ordinal_cols and col2 in ordinal_cols:
             corr_value = prepdata.kendalltau_corr(data[col1], data[col2])
-        elif col1 in categorical_cols and col2 in continuous_cols:
-            corr_value = prepdata.kendalltau_corr(data[col1], data[col2])
+        elif col1 in ordinal_cols and col2 in continuous_cols:
+            corr_value = prepdata.spearmans_corr(data[col1], data[col2])
+        elif col1 in ordinal_cols and col2 in nominal_cols:
+            corr_value = prepdata.cramersv_corr(data[col1], data[col2])
         corr_df.loc[col1, col2] = corr_value
         corr_df.loc[col2, col1] = corr_value
+    if only_target:
+        corr_df = pd.DataFrame(corr_df[target_column])
     return corr_df
+
+
+def feature_selection(dataset,
+                      correlation_threshold=None,
+                      select_top=None,
+                      define_continuous_cols=[],
+                      define_nominal_cols=[],
+                      define_ordinal_cols=[],
+                      categorical_threshold=0.3,
+                      impute_nulls=True,
+                      target_column=None,
+                      target_type=None):
+    corr_df = master_correlation(dataset, define_continuous_cols=define_continuous_cols,
+                                 define_nominal_cols=define_nominal_cols, define_ordinal_cols=define_ordinal_cols,
+                                 categorical_threshold=categorical_threshold, impute_nulls=impute_nulls,
+                                 only_target=True, target_column=target_column, target_type=target_type)
+    corr_dict = corr_df[target_column].to_dict()
+    if correlation_threshold is None:
+        correlation_threshold = 2 / np.sqrt(dataset.shape[0])
+    selected_features = []
+    for col in corr_dict.keys():
+        if helper.get_absolute(corr_dict[col]) >= correlation_threshold:
+            selected_features.append(col)
+    if select_top is not None:
+        selected_features = selected_features[:select_top]
+    return selected_features
 
 
 class Preprocessor:
@@ -281,14 +341,19 @@ class Preprocessor:
     dropna_threshold = 0.7
     derive_from_datetime = True
     ohe_ignore_cols = []
+    ohe_drop_first = True
     feature_selection = True
     ordinal_dict = dict()
     artifact = dict()
     col_labels = dict()
     feature_selection_threshold = None
+    feature_selection_top = None
+    handle_outlier_ignore_cols = []
     ordinal_cols = []
     nominal_cols = []
     continuous_cols = []
+    skewed_cols = []
+    dataset_summary = dict()
 
     def __init__(self,
                  dataset,
@@ -303,15 +368,18 @@ class Preprocessor:
     def set_impute_null_method(self, impute_null_method):
         self.impute_null_method = impute_null_method
 
-    def set_tranform_categorical(self, tranform_categorical, ohe_ignore_cols=[]):
+    def set_tranform_categorical(self, tranform_categorical, ohe_ignore_cols=[], ohe_drop_first=True):
         self.tranform_categorical = tranform_categorical
         self.ohe_ignore_cols = ohe_ignore_cols
+        self.ohe_drop_first = ohe_drop_first
 
     def set_categorical_threshold(self, categorical_threshold):
         self.categorical_threshold = categorical_threshold
 
-    def set_remove_outliers(self, remove_outliers):
-        self.remove_outliers
+    def set_handle_outliers(self, handle_outliers, ignore_cols=[]):
+        if str.lower(handle_outliers) == 'remove':
+            self.remove_outliers = True
+            self.handle_outlier_ignore_cols = ignore_cols
 
     def set_log_transform(self, log_transform):
         self.log_transform = log_transform
@@ -323,9 +391,10 @@ class Preprocessor:
     def derive_from_datetime(self, derive_from_datetime):
         self.derive_from_datetime = derive_from_datetime
 
-    def set_feature_selection(self, feature_selection, threshold=None):
-        self.feature_selection = feature_selection
+    def set_feature_selection(self, correlation_check=True, threshold=None, select_top=None):
+        self.feature_selection = correlation_check
         self.feature_selection_threshold = threshold
+        self.feature_selection_top = select_top
 
     def set_continuous_columns(self, continuous_cols):
         self.continuous_cols = continuous_cols
@@ -338,7 +407,7 @@ class Preprocessor:
         self.ordinal_cols.extend(list(ordinal_dict.keys()))
         self.col_labels.update(ordinal_dict)
 
-    def get_preprocessor_artifact(self, path):
+    def get_preprocessor_artifact(self):
         return self.artifact
 
     def get_col_labels(self):
@@ -346,17 +415,14 @@ class Preprocessor:
 
     def get_processed_dataset(self):
         if str.lower(self.learning_type) not in ['supervised', 'unsupervised']:
-            print('learning_type should be supervised/unsupervised')
-            raise exceptions.ParameterError
+            raise exceptions.ParameterError('learning_type should be supervised/unsupervised')
         if str.lower(self.tranform_categorical) not in ['label_encoding', 'one_hot_encoding']:
-            print('tranform_categorical should be label_encoding/one_hot_encoding')
-            raise exceptions.ParameterError
+            raise exceptions.ParameterError('tranform_categorical should be label_encoding/one_hot_encoding')
         if str.lower(self.learning_type) == 'supervised' and self.target_variable is None:
-            print('target_variable is a required parameter for supervised learning')
-            raise exceptions.ParameterError
+            raise exceptions.ParameterError('target_variable is a required parameter for supervised learning')
         if str.lower(self.learning_type) == 'supervised' and self.target_type is None:
-            print('target_type (continuous/categorical) is a required parameter for supervised learning')
-            raise exceptions.ParameterError
+            raise exceptions.ParameterError(
+                'target_type (continuous/categorical) is a required parameter for supervised learning')
 
         # resetting the index of the dataset
         self.dataset = self.dataset.reset_index(drop=True)
@@ -374,18 +440,17 @@ class Preprocessor:
         # drop all single valued columns
         self.dataset = prepdata.drop_single_valued_cols(self.dataset)
 
-        self.dataset = prepdata.custom_ordinal_mapper(self.dataset, self.ordinal_dict)
-
         # transform ordinal columns to integer values
-        ordinal_labels, self.dataset = prepdata.get_ordinal_encoded_df(self.dataset)
+        ordinal_labels, self.dataset = prepdata.get_ordinal_encoded_df(self.dataset,
+                                                                       custom_ordinal_dict=self.ordinal_dict)
         self.col_labels.update(ordinal_labels)
-        self.ordinal_cols.extend([col for col in self.ordinal_labels.keys() if col != self.target_variable])
+        self.ordinal_cols.extend([col for col in ordinal_labels.keys() if col != self.target_variable])
 
         for col in self.dataset:
-            if col != self.target_variable:
-                if helper.check_categorical_col(self.dataset[col], categorical_threshold=self.categorical_threshold) and col not in self.ordinal_cols+self.nominal_cols+self.continuous_cols:
+            if col != self.target_variable and col not in self.ordinal_cols + self.nominal_cols + self.continuous_cols:
+                if helper.check_categorical_col(self.dataset[col], categorical_threshold=self.categorical_threshold):
                     self.nominal_cols.append(col)
-                elif helper.check_numeric_col(self.dataset[col]) and col not in self.ordinal_cols+self.nominal_cols+self.continuous_cols:
+                elif helper.check_numeric_col(self.dataset[col]):
                     self.continuous_cols.append(col)
 
         self.ordinal_cols = list(set(self.ordinal_cols))
@@ -396,4 +461,42 @@ class Preprocessor:
         print('Columns identified as nominal are ' + ','.join(self.nominal_cols))
         print('Columns identified as continuous are ' + ','.join(self.continuous_cols))
 
+        summary_dict = prepdata.dataset_summary(
+            self.dataset[self.continuous_cols + self.ordinal_cols + self.nominal_cols],
+            define_continuous_cols=self.continuous_cols,
+            define_nominal_cols=self.nominal_cols,
+            define_ordinal_cols=self.ordinal_cols,
+            categorical_threshold=self.categorical_threshold)
+        self.dataset_summary.update(summary_dict)
+        print(self.dataset_summary)
 
+        if str.lower(self.tranform_categorical) == 'label_encoding':
+            labels, self.dataset = prepdata.get_label_encoded_df(self.dataset,
+                                                                 categorical_threshold=self.categorical_threshold,
+                                                                 define_nominal_cols=self.nominal_cols,
+                                                                 ignore_cols=self.ordinal_cols + self.continuous_cols)
+            self.col_labels.update(labels)
+        elif str.lower(self.tranform_categorical) == 'one_hot_encoding':
+            self.dataset = prepdata.get_ohe_df(self.dataset,
+                                               target_variable=self.target_variable,
+                                               define_nominal_cols=self.nominal_cols,
+                                               ignore_cols=self.ohe_ignore_cols + self.ordinal_cols + self.continuous_cols,
+                                               categorical_threshold=self.categorical_threshold,
+                                               drop_first=self.ohe_drop_first)
+            if len(self.ohe_ignore_cols) > 0:
+                labels, self.dataset = prepdata.get_label_encoded_df(self.dataset,
+                                                                     categorical_threshold=self.categorical_threshold,
+                                                                     define_nominal_cols=self.ohe_ignore_cols,
+                                                                     ignore_cols=self.ordinal_cols + self.continuous_cols)
+                self.col_labels.update(labels)
+
+        self.dataset = prepdata.impute_nulls(self.dataset,
+                                             method=self.impute_null_method,
+                                             define_continuous_cols=self.continuous_cols,
+                                             define_nominal_cols=self.nominal_cols,
+                                             define_ordinal_cols=self.ordinal_cols,
+                                             categorical_threshold=self.categorical_threshold)
+
+        nominal_dataset = self.dataset[self.nominal_cols]
+        ordinal_dataset = self.dataset[self.ordinal_cols]
+        continuous_dataset = self.dataset[self.continuous_cols]

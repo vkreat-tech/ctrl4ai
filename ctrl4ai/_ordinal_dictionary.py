@@ -20,7 +20,8 @@ _likert_samples = [
     {'unfair': 0, 'fair': 1},
     {'disagree': 0, 'agree': 1},
     {'false': 0, 'true': 1},
-    {'no': 0, 'yes': 1}
+    {'no': 0, 'yes': 1},
+    {'n': 0, 'y': 1}
 ]
 
 
