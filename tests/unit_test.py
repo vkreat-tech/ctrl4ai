@@ -2,9 +2,11 @@ from ctrl4ai import datasets
 from ctrl4ai import prepdata
 from ctrl4ai import automl
 from ctrl4ai import helper
+from ctrl4ai import exceptions
 
 import pandas as pd
 import numpy as np
+import json
 
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
@@ -15,17 +17,17 @@ class TestingError(Exception):
     pass
 
 
-dataset = datasets.trip_fare()
-dataset = dataset.head(10000)
+dataset1 = datasets.trip_fare()
+dataset1 = dataset1.head(9999)
 
-#prep = automl.Preprocessor(dataset, learning_type='Supervised', target_variable='fare_amount', target_type='continuous')
-#prep.get_processed_dataset()
+dataset2 = datasets.titanic()
 
-data = {'level': ['level 0', 'level 1', 'level 2', 'level 3', 'level 3', 'level 2', 'level 1', 'level 0', 'level 1', 'level 2'],
-        'value': [1, 6, 8, 2, 4, 5, 8, 2, 6, 8],
-        'eligible': ['yes', 'no', 'yes', 'no', 'yes', 'no', 'yes', 'no', 'yes', np.nan],
-        'grade': ['A', 'B', 'C', 'A', 'B', 'C', 'A', 'B', 'C', np.nan]}
+prep = automl.Preprocessor(dataset1, learning_type='Supervised', target_variable='fare_amount', target_type='continuous')
+prep.set_tranform_categorical('one_hot_encoding')
+cleansed_dataset = prep.get_processed_dataset()
+print(cleansed_dataset)
 
-df = pd.DataFrame(data)
-df = prepdata.get_ohe_df(df,define_nominal_cols=['level','grade'], drop_first=False)
-print(df)
+print(prep.get_preprocessor_artifact(file_name=r'C:\Users\SSelvaku\Documents\Temp\artifact.json'))
+
+
+

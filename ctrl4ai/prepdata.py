@@ -51,25 +51,35 @@ def derive_from_datetime(dataset):
     Description: Derives the hour, weekday, year and month from a datetime column
     Returns: Dataframe [with new columns derived from datetime columns]
     """
+    columns = []
     for column, dtype in dataset.dtypes.items():
         if 'datetime' in str(dtype):
+            columns.append(column)
             dataset['hour_of_' + column] = dataset[column].apply(lambda x: x.hour)
             dataset['weekday_of_' + column] = dataset[column].apply(lambda x: x.weekday())
             dataset['year_of_' + column] = dataset[column].apply(lambda x: x.year)
             dataset['month_of_' + column] = dataset[column].apply(lambda x: x.month)
-    return dataset
+    return dataset, columns
 
 
-def log_transform(dataset, method='yeojohnson', categorical_threshold=0.3):
+def log_transform(dataset, method='yeojohnson', define_continuous_cols=[], ignore_cols=[], categorical_threshold=0.3):
     """
     Usage: [arg1]:[pandas dataframe],[method]=['yeojohnson'/'added_constant']
     Description: Checks if the a continuous column is skewed and does log transformation
     Returns: Dataframe [with all skewed columns normalized using appropriate approach]
     """
+    continuous_columns = []
+    for col in define_continuous_cols:
+        if col not in ignore_cols:
+            continuous_columns.append(col)
+
     for col in dataset.columns:
-        if helper.check_categorical_col(dataset[col],
-                                        categorical_threshold=categorical_threshold) == False and helper.check_numeric_col(
-                dataset[col]) and np.abs(scipy.stats.skew(dataset[col])) > 1:
+        if col not in continuous_columns+ignore_cols:
+            if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold) == False and helper.check_numeric_col(dataset[col]):
+                continuous_columns.append(col)
+
+    for col in dataset.columns:
+        if col in continuous_columns and np.abs(scipy.stats.skew(dataset[col])) > 1:
             print('Log Normalization(' + method + ') applied for ' + col)
             if method == 'yeojohnson':
                 dataset[col] = dataset[col].apply(lambda x: helper.yeojohnsonlog(x))
@@ -87,12 +97,14 @@ def drop_null_fields(dataset,
     """
     no_of_records = dataset.shape[0]
     select_cols = []
+    dropped_cols = []
     for index, val in dataset.isnull().sum().items():
         if val / no_of_records < dropna_threshold or index in ignore_cols:
             select_cols.append(index)
         else:
+            dropped_cols.append(index)
             print('Dropping null dominated column(s) ' + index)
-    return (dataset[select_cols])
+    return dataset[select_cols], dropped_cols
 
 
 def drop_single_valued_cols(dataset):
@@ -125,15 +137,17 @@ def get_ohe_df(dataset,
     """
     nominal_cols = []
     nominal_cols.extend(define_nominal_cols)
+    columns = []
     for col in dataset:
-        if col not in nominal_cols+ignore_cols and col != target_variable :
+        if col not in nominal_cols+ignore_cols and col != target_variable:
             if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold):
                 nominal_cols.append(col)
     for col in dataset.columns:
         if col in nominal_cols and col not in ignore_cols:
             print('One hot encoding ' + col)
+            columns.append(col)
             dataset = helper.one_hot_encoding(dataset, [col], drop_first=drop_first)
-    return dataset
+    return dataset, columns
 
 
 def drop_non_numeric(dataset):
@@ -177,6 +191,12 @@ def impute_nulls(dataset,
             elif helper.check_numeric_col(dataset[col]):
                 continuous_cols.append(col)
     if str.lower(method) == 'knn':
+        for col, value in dataset.isnull().sum().items():
+            if value > 0:
+                if col in nominal_cols + ordinal_cols:
+                    print("KNN (Only Categorical): Replaced nulls in " + col + " with mode")
+                    mode_val = dataset[col].mode()[0]
+                    dataset[col] = dataset[col].fillna(mode_val)
         k_knn = int(np.ceil(np.sqrt(dataset.shape[0])))
         if k_knn % 2 == 0:
             k_knn += 1
@@ -521,3 +541,40 @@ def dataset_summary(dataset,
         if np.abs(scipy.stats.skew(dataset[col])) > 1:
             dataset_summary[col]['Skewed'] = 'Y'
     return dataset_summary
+
+
+def split_dataset(dataset, n_splits, proportion=None, shuffle=False):
+    if len(proportion) != n_splits:
+        raise exceptions.ParameterError('n_splits should be equal to the number of values in proportion')
+    if sum(proportion) != 1:
+        raise exceptions.ParameterError('The sum of values in proportion should be 1')
+
+    indices = list(dataset.index)
+
+    if shuffle:
+        np.random.shuffle(indices)
+
+    df_list = []
+    indices_split = []
+    prev = -1
+    length = len(indices)
+    for ctr in range(n_splits):
+        max_records = int(np.floor(proportion[ctr] * length))
+        start = prev + 1
+        end = start + max_records
+        curr_split = indices[start:end+1]
+        if n_splits-ctr == 1:
+            curr_split = indices[start:]
+        indices_split.append(curr_split)
+        curr_df = dataset.iloc[curr_split]
+        df_list.append(curr_df)
+        prev = end
+
+    return df_list, indices_split
+
+
+def Xy_split(dataset, target_feature):
+    X = dataset.drop([target_feature], axis=1)
+    y = dataset[[target_feature]]
+    return X, y
+
