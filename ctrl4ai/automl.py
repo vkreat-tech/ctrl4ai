@@ -9,12 +9,9 @@ from . import prepdata
 from . import helper
 from . import exceptions
 
-import sklearn
 import json
 import pandas as pd
 import numpy as np
-from pickle import dump
-from datetime import datetime
 from itertools import combinations
 
 pd.set_option('mode.chained_assignment', None)
@@ -180,7 +177,8 @@ def preprocess(dataset,
 
 
 def scale_transform(dataset,
-                    method='standard'):
+                    method='standard',
+                    summary_dict=None):
     """
     Usage: [arg1]:[dataframe], [method (default=standard)]:[Choose between standard, mimmax, robust, maxabs]
     Returns: numpy array [to be passed directly to ML model]
@@ -191,22 +189,23 @@ def scale_transform(dataset,
     maxabs: Handling sparse data
     
     """
-    if str.lower(method) == 'mimmax':
-        scaler = sklearn.preprocessing.MinMaxScaler()
-    elif str.lower(method) == 'standard':
-        scaler = sklearn.preprocessing.StandardScaler()
-    elif str.lower(method) == 'robust':
-        scaler = sklearn.preprocessing.RobustScaler()
-    elif str.lower(method) == 'maxabs':
-        scaler = sklearn.preprocessing.MaxAbsScaler()
-    arr_data = scaler.fit_transform(dataset)
-    now = datetime.now()
-    timestamp = str(datetime.timestamp(now)).replace('.', '_')
-    artifact_file = 'scaler_' + timestamp + '.pkl'
-    dump(scaler, open(artifact_file, 'wb'))
-    print(
-        'Scaler artifact stored in ' + artifact_file + '. To reuse, execute scaler = load(open(<Scaler artifact file name>, \'rb\'))')
-    return arr_data
+    if summary_dict is None:
+        summary_dict = dataset.describe().to_dict()
+        for col in dataset:
+            median = dataset[col].median()
+            summary_dict[col]['median'] = median
+    for col in dataset:
+        if str.lower(method) == 'minmax':
+            dataset[col] = (dataset[col] - summary_dict[col]['min']) / (summary_dict[col]['max'] - summary_dict[col]['min'])
+        if str.lower(method) == 'average':
+            dataset[col] = (dataset[col] - summary_dict[col]['mean']) / (summary_dict[col]['max'] - summary_dict[col]['min'])
+        elif str.lower(method) == 'standard':
+            dataset[col] = (dataset[col] - summary_dict[col]['mean']) / summary_dict[col]['std']
+        elif str.lower(method) == 'robust':
+            dataset[col] = (dataset[col] - summary_dict[col]['median']) / (summary_dict[col]['75%'] - summary_dict[col]['25%'])
+        elif str.lower(method) == 'maxabs':
+            dataset[col] = dataset[col] / max([helper.get_absolute(summary_dict[col]['min']), helper.get_absolute(summary_dict[col]['max'])])
+    return dataset, summary_dict
 
 
 def master_correlation(dataset,
@@ -358,6 +357,7 @@ class Preprocessor:
     continuous_cols = []
     dataset_summary = dict()
     corr_df = None
+    scaling_method = None
 
     def __init__(self,
                  dataset,
@@ -415,6 +415,9 @@ class Preprocessor:
         if multicollinearity_check:
             self.check_master_correlation = True
 
+    def set_scale_transform(self, method):
+        self.scaling_method = method
+
     def get_preprocessor_artifact(self, file_name=None):
         if file_name is not None:
             json_str = json.dumps(eval(str(self.artifact)))
@@ -449,7 +452,7 @@ class Preprocessor:
         if self.drop_null_dominated:
             self.dataset, columns = prepdata.drop_null_fields(self.dataset, dropna_threshold=self.dropna_threshold)
 
-        self.artifact['drop_null_dominated'] = columns
+        self.artifact['null_dominated_columns'] = columns
 
         self.dataset = helper.bool_to_int(self.dataset)
 
@@ -469,9 +472,9 @@ class Preprocessor:
                 elif helper.check_numeric_col(self.dataset[col]):
                     self.continuous_cols.append(col)
 
-        if self.target_type == 'continuous':
+        if str.lower(self.target_type) == 'continuous':
             self.continuous_cols.append(self.target_variable)
-        elif self.target_type == 'categorical':
+        elif str.lower(self.target_type) == 'categorical':
             if self.target_variable not in self.ordinal_cols:
                 self.nominal_cols.append(self.target_variable)
 
@@ -568,12 +571,17 @@ class Preprocessor:
                                                                   target_column=self.target_variable,
                                                                   target_type=self.target_type,
                                                                   corr_df=self.corr_df)
-            selected_features = correlated_features + [self.target_variable]
+            selected_features = correlated_features
             self.dataset = self.dataset[selected_features]
         else:
             selected_features = list(self.dataset.columns)
         self.artifact['selected_features'] = selected_features
 
+        if self.scaling_method is not None:
+            self.dataset, summary = scale_transform(self.dataset, self.scaling_method)
+            self.artifact['scaling_summary'] = summary
+
+        self.artifact['scaling_method'] = self.scaling_method
         self.artifact['impute_null_method'] = self.impute_null_method
         self.artifact['tranform_categorical'] = self.tranform_categorical
         self.artifact['categorical_threshold'] = self.categorical_threshold

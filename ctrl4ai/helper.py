@@ -25,13 +25,15 @@ def isNaN(num):
 
 
 def added_constant_log(dataset,
-                       col):
+                       col,
+                       min_value=None):
     """
     Usage: [arg1]:[dataset], [arg2]:[column in which log transform should be done]
     Description: Log transforms the specified column
     Returns: DataFrame
     """
-    min_value = dataset[col].min()
+    if min_value is None:
+        min_value = dataset[col].min()
     if min_value <= 0:
         dataset[col] = dataset[col].apply(lambda x: np.log(x + np.abs(min_value) + 1))
     else:

@@ -17,17 +17,32 @@ class TestingError(Exception):
     pass
 
 
-dataset1 = datasets.trip_fare()
-dataset1 = dataset1.head(9999)
+dataset = datasets.trip_fare()
+dataset = dataset.head(10000)
 
-dataset2 = datasets.titanic()
+dfs, _ = prepdata.split_dataset(dataset, n_splits=2, proportion=[0.7, 0.3], shuffle=True)
 
-prep = automl.Preprocessor(dataset1, learning_type='Supervised', target_variable='fare_amount', target_type='continuous')
+train = dfs[0]
+test = dfs[1]
+
+prep = automl.Preprocessor(train, learning_type='Supervised', target_variable='fare_amount', target_type='continuous')
+prep.set_feature_selection(False)
 prep.set_tranform_categorical('one_hot_encoding')
 cleansed_dataset = prep.get_processed_dataset()
-print(cleansed_dataset)
+prep.get_preprocessor_artifact(r'C:\Users\SSelvaku\Documents\Temp\artifact.json')
 
-print(prep.get_preprocessor_artifact(file_name=r'C:\Users\SSelvaku\Documents\Temp\artifact.json'))
+# prep = automl.Preprocessor(train, learning_type='Supervised', target_variable='fare_amount', target_type='continuous')
+
+# artifact_file = r'C:\Users\SSelvaku\Documents\Temp\artifact.json'
+# artifact_json = open(artifact_file).readline()
+# artifact = json.loads(artifact_json)
+# print(artifact)
+
+from sklearn.preprocessing import MaxAbsScaler
+scaler = MaxAbsScaler()
+X1 = pd.DataFrame(scaler.fit_transform(cleansed_dataset))
+print(X1)
 
 
-
+X2 = automl.scale_transform(cleansed_dataset, 'maxabs')
+print(X2)

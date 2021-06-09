@@ -540,10 +540,18 @@ def dataset_summary(dataset,
         dataset_summary[col]['max'] = dataset[col].max()
         if np.abs(scipy.stats.skew(dataset[col])) > 1:
             dataset_summary[col]['Skewed'] = 'Y'
+        else:
+            dataset_summary[col]['Skewed'] = 'N'
     return dataset_summary
 
 
-def split_dataset(dataset, n_splits, proportion=None, shuffle=False):
+def split_dataset(dataset, n_splits, proportion=None, mode=None, shuffle=False):
+    if mode == 'equal':
+        each_proportion = int((1/n_splits)*100)
+        proportion= [each_proportion for i in range(n_splits-1)]
+        final_val = 100 - sum(proportion)
+        proportion.append(final_val)
+        proportion = [val/100 for val in proportion]
     if len(proportion) != n_splits:
         raise exceptions.ParameterError('n_splits should be equal to the number of values in proportion')
     if sum(proportion) != 1:
@@ -567,9 +575,9 @@ def split_dataset(dataset, n_splits, proportion=None, shuffle=False):
             curr_split = indices[start:]
         indices_split.append(curr_split)
         curr_df = dataset.iloc[curr_split]
+        curr_df = curr_df.reset_index()
         df_list.append(curr_df)
         prev = end
-
     return df_list, indices_split
 
 
