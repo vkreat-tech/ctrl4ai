@@ -321,7 +321,7 @@ def feature_selection(dataset,
                                      define_nominal_cols=define_nominal_cols, define_ordinal_cols=define_ordinal_cols,
                                      categorical_threshold=categorical_threshold, impute_nulls=impute_nulls,
                                      only_target=True, target_column=target_column, target_type=target_type)
-    corr_dict = corr_df[target_column].to_dict()
+    corr_dict = corr_df[target_column].sort_values(ascending=False).to_dict()
     if correlation_threshold is None:
         correlation_threshold = helper.correlation_threshold(dataset.shape[0])
     selected_features = []

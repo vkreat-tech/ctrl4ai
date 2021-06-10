@@ -594,7 +594,7 @@ def split_dataset(dataset, n_splits, proportion=None, mode=None, shuffle=False):
             curr_split = indices[start:]
         indices_split.append(curr_split)
         curr_df = dataset.iloc[curr_split]
-        curr_df = curr_df.reset_index()
+        curr_df = curr_df.reset_index(drop=True)
         df_list.append(curr_df)
         prev = end
     return df_list, indices_split
