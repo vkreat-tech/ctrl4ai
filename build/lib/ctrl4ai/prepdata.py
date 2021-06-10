@@ -492,6 +492,25 @@ def multicollinearity_check(corr_df, threshold=0.7):
     return result_set
 
 
+def get_multicollinearity_removals(corr_df, target_variable, threshold=0.7):
+    res = multicollinearity_check(corr_df, threshold=threshold)
+    corr = list(set([helper.get_absolute(item[1]) for item in res]))
+    corr.sort(reverse=True)
+    tgt_corr = corr_df[target_variable].to_dict()
+    remove_list = []
+    for val in corr:
+        for item in res:
+            if helper.get_absolute(item[1]) == val:
+                cols = item[0]
+                if target_variable not in cols:
+                    if len(helper.intersection(cols, remove_list)) == 0:
+                        if cols[0] < cols[1]:
+                            remove_list.append(cols[0])
+                        else:
+                            remove_list.append(cols[1])
+    return remove_list
+
+
 def dataset_summary(dataset,
                     define_continuous_cols=[],
                     define_nominal_cols=[],
@@ -540,6 +559,8 @@ def dataset_summary(dataset,
         dataset_summary[col]['max'] = dataset[col].max()
         if np.abs(scipy.stats.skew(dataset[col])) > 1:
             dataset_summary[col]['Skewed'] = 'Y'
+        else:
+            dataset_summary[col]['Skewed'] = 'N'
     return dataset_summary
 
 
@@ -573,9 +594,9 @@ def split_dataset(dataset, n_splits, proportion=None, mode=None, shuffle=False):
             curr_split = indices[start:]
         indices_split.append(curr_split)
         curr_df = dataset.iloc[curr_split]
+        curr_df = curr_df.reset_index()
         df_list.append(curr_df)
         prev = end
-
     return df_list, indices_split
 
 

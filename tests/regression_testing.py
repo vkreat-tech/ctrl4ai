@@ -83,7 +83,24 @@ expected_dict = {'level': {0: 0, 1: 1, 2: 2, 3: 3, 4: 3, 5: 2, 6: 1, 7: 0, 8: 1,
 if df.to_dict() != expected_dict:
     raise TestingError('Error in prepdata.custom_ordinal_mapper')
 
-
 # =============================================================================
 
 
+# =============================================================================
+# prepdata.get_multicollinearity_removals
+# =============================================================================
+
+l = [
+    [1, 0.9, 0.4, 0.7, 0.6],
+    [0.9, 1, 0, -0.8, 0.2],
+    [0.4, 0, 1, 0.6, 0.3],
+    [0.7, -0.8, 0.6, 1, 0.8],
+    [0.6, 0.2, 0.3, 0.8, 1]
+]
+
+corr_df = pd.DataFrame(l, index=('a', 'b', 'c', 'd', 'e'), columns=('a', 'b', 'c', 'd', 'e'))
+
+if prepdata.get_multicollinearity_removals(corr_df, 'e') != ['a', 'b']:
+    raise TestingError('Error in prepdata.get_multicollinearity_removals')
+
+# =============================================================================

@@ -25,13 +25,15 @@ def isNaN(num):
 
 
 def added_constant_log(dataset,
-                       col):
+                       col,
+                       min_value=None):
     """
     Usage: [arg1]:[dataset], [arg2]:[column in which log transform should be done]
     Description: Log transforms the specified column
     Returns: DataFrame
     """
-    min_value = dataset[col].min()
+    if min_value is None:
+        min_value = dataset[col].min()
     if min_value <= 0:
         dataset[col] = dataset[col].apply(lambda x: np.log(x + np.abs(min_value) + 1))
     else:
@@ -185,7 +187,8 @@ def one_hot_encoding(dataset,
     Description: Transformation for categorical features by getting dummies
     Returns: Dataframe [with separate column for each categorical values]
     """
-    dataset = pd.merge(dataset, pd.get_dummies(dataset[categorical_cols_list], columns=categorical_cols_list, drop_first=drop_first),
+    dataset = pd.merge(dataset, pd.get_dummies(dataset[categorical_cols_list], columns=categorical_cols_list,
+                                               drop_first=drop_first),
                        left_index=True, right_index=True)
     dataset = dataset.drop(categorical_cols_list, axis=1)
     return dataset
@@ -253,3 +256,20 @@ def get_absolute(num):
         return num
     else:
         return -num
+
+
+def correlation_threshold(rows):
+    return 2 / np.sqrt(rows)
+
+
+def collinearity_threshold(rows):
+    if rows <= 100:
+        return 0.99
+    else:
+        return 2 / np.log10(rows)
+
+
+def intersection(seq1, seq2):
+    seq3 = [value for value in seq1 if value in seq2]
+    return seq3
+

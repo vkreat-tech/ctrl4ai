@@ -323,7 +323,7 @@ def feature_selection(dataset,
                                      only_target=True, target_column=target_column, target_type=target_type)
     corr_dict = corr_df[target_column].to_dict()
     if correlation_threshold is None:
-        correlation_threshold = 2 / np.sqrt(dataset.shape[0])
+        correlation_threshold = helper.correlation_threshold(dataset.shape[0])
     selected_features = []
     for col in corr_dict.keys():
         if helper.get_absolute(corr_dict[col]) >= correlation_threshold:
@@ -358,6 +358,8 @@ class Preprocessor:
     dataset_summary = dict()
     corr_df = None
     scaling_method = None
+    multicollinearity_check = False
+    multicollinearity_threshold = None
 
     def __init__(self,
                  dataset,
@@ -411,9 +413,10 @@ class Preprocessor:
         self.ordinal_cols.extend(list(ordinal_dict.keys()))
         self.col_labels.update(ordinal_dict)
 
-    def set_multicollinearity_check(self, multicollinearity_check):
-        if multicollinearity_check:
-            self.check_master_correlation = True
+    def set_multicollinearity_check(self, multicollinearity_check, threshold=None):
+        self.multicollinearity_check = multicollinearity_check
+        self.check_master_correlation = multicollinearity_check
+        self.multicollinearity_threshold = threshold
 
     def set_scale_transform(self, method):
         self.scaling_method = method
@@ -550,6 +553,7 @@ class Preprocessor:
                                                                          self.target_variable] + self.ordinal_cols + self.nominal_cols,
                                                          categorical_threshold=self.categorical_threshold,
                                                          define_continuous_cols=self.continuous_cols)
+
         if self.check_master_correlation:
             self.corr_df = master_correlation(self.dataset,
                                               define_continuous_cols=self.continuous_cols,
@@ -560,8 +564,10 @@ class Preprocessor:
 
         # does feature selection for supervised learning if opted
         if self.do_feature_selection:
+            if self.feature_selection_threshold is None:
+                self.feature_selection_threshold = helper.correlation_threshold(self.dataset.shape[0])
             correlated_features, self.corr_df = feature_selection(self.dataset,
-                                                                  correlation_threshold=self.categorical_threshold,
+                                                                  correlation_threshold=self.feature_selection_threshold,
                                                                   select_top=self.feature_selection_top,
                                                                   define_continuous_cols=self.continuous_cols,
                                                                   define_nominal_cols=self.nominal_cols,
@@ -577,10 +583,28 @@ class Preprocessor:
             selected_features = list(self.dataset.columns)
         self.artifact['selected_features'] = selected_features
 
+        if self.multicollinearity_check:
+            if self.multicollinearity_threshold is None:
+                self.multicollinearity_threshold = helper.collinearity_threshold(self.dataset.shape[0])
+            self.corr_df = master_correlation(self.dataset,
+                                              define_continuous_cols=self.continuous_cols,
+                                              define_nominal_cols=self.nominal_cols,
+                                              define_ordinal_cols=self.ordinal_cols,
+                                              categorical_threshold=self.categorical_threshold,
+                                              impute_nulls=False)
+            remove_columns = prepdata.get_multicollinearity_removals(self.corr_df, self.target_variable, threshold= self.multicollinearity_threshold)
+            self.artifact['multicollinearity_check'] = self.multicollinearity_check
+            self.dataset = self.dataset.drop(remove_columns, axis=1)
+
         if self.scaling_method is not None:
             self.dataset, summary = scale_transform(self.dataset, self.scaling_method)
             self.artifact['scaling_summary'] = summary
 
+        final_features = list(self.dataset.columns)
+        self.artifact['final_features'] = final_features
+
+        self.artifact['multicollinearity_check'] = self.multicollinearity_check
+        self.artifact['multicollinearity_threshold'] = self.multicollinearity_threshold
         self.artifact['scaling_method'] = self.scaling_method
         self.artifact['impute_null_method'] = self.impute_null_method
         self.artifact['tranform_categorical'] = self.tranform_categorical
