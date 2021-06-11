@@ -632,3 +632,9 @@ class Preprocessor:
 
     def get_master_correlation(self):
         return self.corr_df
+
+    def fit(self, artifact):
+        self.dataset = self.dataset.reset_index(drop=True)
+
+
+

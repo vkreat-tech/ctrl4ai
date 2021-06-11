@@ -17,31 +17,28 @@ class TestingError(Exception):
     pass
 
 
-dataset = datasets.trip_fare()
-dataset = dataset.head(10000)
-
-dfs, _ = prepdata.split_dataset(dataset, n_splits=2, proportion=[0.7, 0.3], shuffle=True)
-
-train = dfs[0]
-test = dfs[1]
-
-prep = automl.Preprocessor(train, learning_type='Supervised', target_variable='fare_amount', target_type='continuous')
-prep.set_multicollinearity_check(True)
-prep.set_tranform_categorical('one_hot_encoding')
-cleansed_dataset = prep.get_processed_dataset()
-prep.get_preprocessor_artifact(r'C:\Users\SSelvaku\Documents\Temp\artifact.json')
-
-prep = automl.Preprocessor(train, learning_type='Supervised', target_variable='fare_amount', target_type='continuous')
-
-artifact_file = r'C:\Users\SSelvaku\Documents\Temp\artifact.json'
-artifact_json = open(artifact_file).readline()
-artifact = json.loads(artifact_json)
-print(artifact)
+df1 = datasets.trip_fare()
+df1 = df1.head(10000)
 
 
+k_datasets = prepdata.k_fold(df1, 5)
 
+#print(k_datasets)
 
+# train = dfs[0]
+# test = dfs[1]
 
+# prep = automl.Preprocessor(train, learning_type='Supervised', target_variable='fare_amount', target_type='continuous')
+# prep.set_feature_selection(True, select_top=10)
+# cleansed_dataset = prep.get_processed_dataset()
+# prep.get_preprocessor_artifact(r'C:\Users\SSelvaku\Documents\Temp\artifact.json')
 
+# print(cleansed_dataset)
 
+# prep = automl.Preprocessor(train, learning_type='Supervised', target_variable='fare_amount', target_type='continuous')
+
+# artifact_file = r'C:\Users\SSelvaku\Documents\Temp\artifact.json'
+# artifact_json = open(artifact_file).readline()
+# artifact = json.loads(artifact_json)
+# print(artifact)
 

@@ -567,7 +567,7 @@ def dataset_summary(dataset,
 def split_dataset(dataset, n_splits, proportion=None, mode=None, shuffle=False):
     if mode == 'equal':
         each_proportion = int((1/n_splits)*100)
-        proportion= [each_proportion for i in range(n_splits-1)]
+        proportion = [each_proportion for i in range(n_splits-1)]
         final_val = 100 - sum(proportion)
         proportion.append(final_val)
         proportion = [val/100 for val in proportion]
@@ -583,13 +583,17 @@ def split_dataset(dataset, n_splits, proportion=None, mode=None, shuffle=False):
 
     df_list = []
     indices_split = []
-    prev = -1
+    prev = 0
     length = len(indices)
     for ctr in range(n_splits):
         max_records = int(np.floor(proportion[ctr] * length))
-        start = prev + 1
+        start = prev
         end = start + max_records
-        curr_split = indices[start:end+1]
+        if ctr == n_splits-1:
+            end = length
+        print(max_records)
+        print(start, end)
+        curr_split = indices[start:end]
         if n_splits-ctr == 1:
             curr_split = indices[start:]
         indices_split.append(curr_split)
@@ -604,4 +608,20 @@ def Xy_split(dataset, target_feature):
     X = dataset.drop([target_feature], axis=1)
     y = dataset[[target_feature]]
     return X, y
+
+
+def k_fold(dataset, k, shuffle=True):
+    dfs, _ = split_dataset(dataset, n_splits=k, mode='equal', shuffle=shuffle)
+    result = []
+    for i in range(k):
+        train_list = []
+        for j in range(k):
+            if j == i:
+                test_data = dfs[j]
+            else:
+                train_list.append(dfs[j])
+        train_data = pd.concat(train_list)
+        train_data = train_data.reset_index(drop=True)
+        result.append([train_data, test_data])
+    return result
 
