@@ -591,8 +591,6 @@ def split_dataset(dataset, n_splits, proportion=None, mode=None, shuffle=False):
         end = start + max_records
         if ctr == n_splits-1:
             end = length
-        print(max_records)
-        print(start, end)
         curr_split = indices[start:end]
         if n_splits-ctr == 1:
             curr_split = indices[start:]
