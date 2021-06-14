@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from math import radians, cos, sin, asin, sqrt
 from scipy import stats
+import json
 
 from . import _ordinal_dictionary
 
@@ -272,4 +273,15 @@ def collinearity_threshold(rows):
 def intersection(seq1, seq2):
     seq3 = [value for value in seq1 if value in seq2]
     return seq3
+
+
+def difference(seq1, seq2):
+    return [x for x in seq1 if x not in seq2]
+
+
+def load_artifact(artifact_file):
+    artifact_json = open(artifact_file).readline()
+    artifact = json.loads(artifact_json)
+    return artifact
+
 

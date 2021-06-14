@@ -44,22 +44,30 @@ def get_timediff(dataset,
     return dataset
 
 
-def derive_from_datetime(dataset):
+def derive_from_datetime(dataset, specify_columns=None):
     """
     Usage: [arg1]:[pandas dataframe]
     Prerequisite: Type for datetime columns to be defined correctly
     Description: Derives the hour, weekday, year and month from a datetime column
     Returns: Dataframe [with new columns derived from datetime columns]
     """
-    columns = []
-    for column, dtype in dataset.dtypes.items():
-        if 'datetime' in str(dtype):
-            columns.append(column)
+    if specify_columns is None:
+        columns = []
+        for column, dtype in dataset.dtypes.items():
+            if 'datetime' in str(dtype):
+                columns.append(column)
+                dataset['hour_of_' + column] = dataset[column].apply(lambda x: x.hour)
+                dataset['weekday_of_' + column] = dataset[column].apply(lambda x: x.weekday())
+                dataset['year_of_' + column] = dataset[column].apply(lambda x: x.year)
+                dataset['month_of_' + column] = dataset[column].apply(lambda x: x.month)
+        return dataset, columns
+    else:
+        for column in specify_columns:
             dataset['hour_of_' + column] = dataset[column].apply(lambda x: x.hour)
             dataset['weekday_of_' + column] = dataset[column].apply(lambda x: x.weekday())
             dataset['year_of_' + column] = dataset[column].apply(lambda x: x.year)
             dataset['month_of_' + column] = dataset[column].apply(lambda x: x.month)
-    return dataset, columns
+        return dataset, list(specify_columns)
 
 
 def log_transform(dataset, method='yeojohnson', define_continuous_cols=[], ignore_cols=[], categorical_threshold=0.3):
@@ -120,7 +128,7 @@ def drop_single_valued_cols(dataset):
     if len(single_valued_cols) > 0:
         print('Dropping single valued column(s) ' + ','.join(single_valued_cols))
         dataset = dataset.drop(single_valued_cols, axis=1)
-    return dataset
+    return dataset, single_valued_cols
 
 
 def get_ohe_df(dataset,
@@ -233,7 +241,6 @@ def label_encode(dataset,
     Returns: Label Dict , Dataframe
     """
     mode_val = dataset[col].mode()[0]
-    # dataset[col] = dataset[col].apply(lambda x: str(x).strip()).astype(str).fillna(mode_val)
     dataset[col] = dataset[col].fillna(mode_val)
     label_dict = dict(zip(dataset[col].unique(), np.arange(dataset[col].unique().shape[0])))
     dataset = dataset.replace({col: label_dict})

@@ -44,22 +44,30 @@ def get_timediff(dataset,
     return dataset
 
 
-def derive_from_datetime(dataset):
+def derive_from_datetime(dataset, specify_columns=None):
     """
     Usage: [arg1]:[pandas dataframe]
     Prerequisite: Type for datetime columns to be defined correctly
     Description: Derives the hour, weekday, year and month from a datetime column
     Returns: Dataframe [with new columns derived from datetime columns]
     """
-    columns = []
-    for column, dtype in dataset.dtypes.items():
-        if 'datetime' in str(dtype):
-            columns.append(column)
+    if specify_columns is None:
+        columns = []
+        for column, dtype in dataset.dtypes.items():
+            if 'datetime' in str(dtype):
+                columns.append(column)
+                dataset['hour_of_' + column] = dataset[column].apply(lambda x: x.hour)
+                dataset['weekday_of_' + column] = dataset[column].apply(lambda x: x.weekday())
+                dataset['year_of_' + column] = dataset[column].apply(lambda x: x.year)
+                dataset['month_of_' + column] = dataset[column].apply(lambda x: x.month)
+        return dataset, columns
+    else:
+        for column in specify_columns:
             dataset['hour_of_' + column] = dataset[column].apply(lambda x: x.hour)
             dataset['weekday_of_' + column] = dataset[column].apply(lambda x: x.weekday())
             dataset['year_of_' + column] = dataset[column].apply(lambda x: x.year)
             dataset['month_of_' + column] = dataset[column].apply(lambda x: x.month)
-    return dataset, columns
+        return dataset, list(specify_columns)
 
 
 def log_transform(dataset, method='yeojohnson', define_continuous_cols=[], ignore_cols=[], categorical_threshold=0.3):
@@ -120,7 +128,7 @@ def drop_single_valued_cols(dataset):
     if len(single_valued_cols) > 0:
         print('Dropping single valued column(s) ' + ','.join(single_valued_cols))
         dataset = dataset.drop(single_valued_cols, axis=1)
-    return dataset
+    return dataset, single_valued_cols
 
 
 def get_ohe_df(dataset,
@@ -233,7 +241,6 @@ def label_encode(dataset,
     Returns: Label Dict , Dataframe
     """
     mode_val = dataset[col].mode()[0]
-    # dataset[col] = dataset[col].apply(lambda x: str(x).strip()).astype(str).fillna(mode_val)
     dataset[col] = dataset[col].fillna(mode_val)
     label_dict = dict(zip(dataset[col].unique(), np.arange(dataset[col].unique().shape[0])))
     dataset = dataset.replace({col: label_dict})
@@ -567,7 +574,7 @@ def dataset_summary(dataset,
 def split_dataset(dataset, n_splits, proportion=None, mode=None, shuffle=False):
     if mode == 'equal':
         each_proportion = int((1/n_splits)*100)
-        proportion= [each_proportion for i in range(n_splits-1)]
+        proportion = [each_proportion for i in range(n_splits-1)]
         final_val = 100 - sum(proportion)
         proportion.append(final_val)
         proportion = [val/100 for val in proportion]
@@ -583,18 +590,20 @@ def split_dataset(dataset, n_splits, proportion=None, mode=None, shuffle=False):
 
     df_list = []
     indices_split = []
-    prev = -1
+    prev = 0
     length = len(indices)
     for ctr in range(n_splits):
         max_records = int(np.floor(proportion[ctr] * length))
-        start = prev + 1
+        start = prev
         end = start + max_records
-        curr_split = indices[start:end+1]
+        if ctr == n_splits-1:
+            end = length
+        curr_split = indices[start:end]
         if n_splits-ctr == 1:
             curr_split = indices[start:]
         indices_split.append(curr_split)
         curr_df = dataset.iloc[curr_split]
-        curr_df = curr_df.reset_index()
+        curr_df = curr_df.reset_index(drop=True)
         df_list.append(curr_df)
         prev = end
     return df_list, indices_split
@@ -604,4 +613,20 @@ def Xy_split(dataset, target_feature):
     X = dataset.drop([target_feature], axis=1)
     y = dataset[[target_feature]]
     return X, y
+
+
+def k_fold(dataset, k, shuffle=True):
+    dfs, _ = split_dataset(dataset, n_splits=k, mode='equal', shuffle=shuffle)
+    result = []
+    for i in range(k):
+        train_list = []
+        for j in range(k):
+            if j == i:
+                test_data = dfs[j]
+            else:
+                train_list.append(dfs[j])
+        train_data = pd.concat(train_list)
+        train_data = train_data.reset_index(drop=True)
+        result.append([train_data, test_data])
+    return result
 

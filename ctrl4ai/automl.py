@@ -11,7 +11,6 @@ from . import exceptions
 
 import json
 import pandas as pd
-import numpy as np
 from itertools import combinations
 
 pd.set_option('mode.chained_assignment', None)
@@ -79,7 +78,7 @@ def preprocess(dataset,
     dataset = helper.bool_to_int(dataset)
 
     # drop all single valued columns
-    dataset = prepdata.drop_single_valued_cols(dataset)
+    dataset, _ = prepdata.drop_single_valued_cols(dataset)
 
     # transform ordinal columns to integer values
     ordinal_labels, dataset = prepdata.get_ordinal_encoded_df(dataset)
@@ -196,15 +195,19 @@ def scale_transform(dataset,
             summary_dict[col]['median'] = median
     for col in dataset:
         if str.lower(method) == 'minmax':
-            dataset[col] = (dataset[col] - summary_dict[col]['min']) / (summary_dict[col]['max'] - summary_dict[col]['min'])
-        if str.lower(method) == 'average':
-            dataset[col] = (dataset[col] - summary_dict[col]['mean']) / (summary_dict[col]['max'] - summary_dict[col]['min'])
+            dataset[col] = (dataset[col] - summary_dict[col]['min']) / (
+                        summary_dict[col]['max'] - summary_dict[col]['min'])
+        elif str.lower(method) == 'average':
+            dataset[col] = (dataset[col] - summary_dict[col]['mean']) / (
+                        summary_dict[col]['max'] - summary_dict[col]['min'])
         elif str.lower(method) == 'standard':
             dataset[col] = (dataset[col] - summary_dict[col]['mean']) / summary_dict[col]['std']
         elif str.lower(method) == 'robust':
-            dataset[col] = (dataset[col] - summary_dict[col]['median']) / (summary_dict[col]['75%'] - summary_dict[col]['25%'])
+            dataset[col] = (dataset[col] - summary_dict[col]['median']) / (
+                        summary_dict[col]['75%'] - summary_dict[col]['25%'])
         elif str.lower(method) == 'maxabs':
-            dataset[col] = dataset[col] / max([helper.get_absolute(summary_dict[col]['min']), helper.get_absolute(summary_dict[col]['max'])])
+            dataset[col] = dataset[col] / max(
+                [helper.get_absolute(summary_dict[col]['min']), helper.get_absolute(summary_dict[col]['max'])])
     return dataset, summary_dict
 
 
@@ -243,7 +246,7 @@ def master_correlation(dataset,
             nominal_cols.append(target_column)
         elif target_type == 'ordinal' and target_column not in ordinal_cols:
             ordinal_cols.append(target_column)
-    dataset = prepdata.drop_single_valued_cols(dataset)
+    dataset, _ = prepdata.drop_single_valued_cols(dataset)
     for col in dataset:
         if col not in nominal_cols + ordinal_cols + continuous_cols:
             if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold):
@@ -329,7 +332,7 @@ def feature_selection(dataset,
         if helper.get_absolute(corr_dict[col]) >= correlation_threshold:
             selected_features.append(col)
     if select_top is not None:
-        selected_features = selected_features[:select_top]
+        selected_features = selected_features[:select_top+1]
     return selected_features, corr_df
 
 
@@ -472,7 +475,7 @@ class Preprocessor:
             self.dataset = helper.bool_to_int(self.dataset)
 
             # drop all single valued columns
-            self.dataset = prepdata.drop_single_valued_cols(self.dataset)
+            self.dataset, single_valued_cols = prepdata.drop_single_valued_cols(self.dataset)
 
             # transform ordinal columns to integer values
             ordinal_labels, self.dataset = prepdata.get_ordinal_encoded_df(self.dataset,
@@ -482,7 +485,8 @@ class Preprocessor:
 
             for col in self.dataset:
                 if col != self.target_variable and col not in self.ordinal_cols + self.nominal_cols + self.continuous_cols:
-                    if helper.check_categorical_col(self.dataset[col], categorical_threshold=self.categorical_threshold):
+                    if helper.check_categorical_col(self.dataset[col],
+                                                    categorical_threshold=self.categorical_threshold):
                         self.nominal_cols.append(col)
                     elif helper.check_numeric_col(self.dataset[col]):
                         self.continuous_cols.append(col)
@@ -551,6 +555,13 @@ class Preprocessor:
                                                  define_ordinal_cols=self.ordinal_cols,
                                                  categorical_threshold=self.categorical_threshold)
 
+            self.dataset, removed_cols = prepdata.drop_single_valued_cols(self.dataset)
+            single_valued_cols.extend(removed_cols)
+            self.artifact['single_valued_cols'] = single_valued_cols
+            self.nominal_cols = helper.difference(self.nominal_cols, removed_cols)
+            self.ordinal_cols = helper.difference(self.ordinal_cols, removed_cols)
+            self.continuous_cols = helper.difference(self.continuous_cols, removed_cols)
+
             if self.log_transform is not None:
                 self.dataset = prepdata.log_transform(self.dataset, method=self.log_transform,
                                                       categorical_threshold=self.categorical_threshold,
@@ -604,7 +615,8 @@ class Preprocessor:
                                                   define_ordinal_cols=self.ordinal_cols,
                                                   categorical_threshold=self.categorical_threshold,
                                                   impute_nulls=False)
-                remove_columns = prepdata.get_multicollinearity_removals(self.corr_df, self.target_variable, threshold= self.multicollinearity_threshold)
+                remove_columns = prepdata.get_multicollinearity_removals(self.corr_df, self.target_variable,
+                                                                         threshold=self.multicollinearity_threshold)
                 self.artifact['multicollinearity_check'] = self.multicollinearity_check
                 self.dataset = self.dataset.drop(remove_columns, axis=1)
 
@@ -643,9 +655,61 @@ class Preprocessor:
             return self.dataset
 
         else:
-            pass
+            # USING ARTIFACT
+
+            self.dataset = self.dataset.reset_index(drop=True)
+
+            datetime_cols = set()
+            for datetime_col in self.artifact['derive_from_datetime']:
+                for col in self.artifact['final_features']:
+                    if datetime_col in col:
+                        datetime_cols.add(datetime_col)
+
+            ohe_cols = set()
+            for ohe_col in self.artifact['one_hot_encoding']:
+                for col in self.artifact['final_features']:
+                    if ohe_col in col:
+                        ohe_cols.add(ohe_col)
+            ohe_cols = list(ohe_cols)
+
+            self.dataset, _ = prepdata.derive_from_datetime(self.dataset, specify_columns=datetime_cols)
+
+            _, self.dataset = prepdata.get_ordinal_encoded_df(self.dataset,
+                                                              custom_ordinal_dict=self.artifact['col_labels'])
+
+            self.dataset = helper.bool_to_int(self.dataset)
+
+            for col in self.dataset.columns:
+                if col in ohe_cols+self.artifact['final_features']:
+                    summary = self.artifact['dataset_summary'][col]
+                    if col in self.artifact['nominal_cols']:
+                        self.dataset[col].fillna(summary['mode'])
+                    elif col in self.artifact['ordinal_cols']:
+                        self.dataset[col].fillna(summary['mode'])
+                    elif col in self.artifact['continuous_cols']:
+                        if summary['Skewed'] == "Y":
+                            self.dataset[col].fillna(summary['median'])
+                            if col != self.target_variable:
+                                if self.artifact['log_transform'] == 'yeojohnson':
+                                    self.dataset[col] = self.dataset[col].apply(lambda x: helper.yeojohnsonlog(x))
+                                elif self.artifact['log_transform'] == 'added_constant':
+                                    dataset = helper.added_constant_log(dataset, col, min_value=summary['min'])
+                        else:
+                            self.dataset[col].fillna(summary['mean'])
+
+            self.dataset = helper.one_hot_encoding(self.dataset, ohe_cols)
+
+            for col in self.artifact['final_features']:
+                if col not in self.dataset.columns:
+                    if col in self.artifact['ordinal_cols']:
+                        self.dataset[col] = 0
+
+            self.dataset = self.dataset[self.artifact['final_features']]
+
+            if self.artifact['scaling_method'] is not None:
+                self.dataset, _ = scale_transform(self.dataset, method=self.artifact['scaling_method'], summary_dict=self.artifact['scaling_summary'])
+
+            return self.dataset
 
     def get_master_correlation(self):
         return self.corr_df
-
-

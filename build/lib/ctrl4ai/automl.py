@@ -11,7 +11,6 @@ from . import exceptions
 
 import json
 import pandas as pd
-import numpy as np
 from itertools import combinations
 
 pd.set_option('mode.chained_assignment', None)
@@ -79,7 +78,7 @@ def preprocess(dataset,
     dataset = helper.bool_to_int(dataset)
 
     # drop all single valued columns
-    dataset = prepdata.drop_single_valued_cols(dataset)
+    dataset, _ = prepdata.drop_single_valued_cols(dataset)
 
     # transform ordinal columns to integer values
     ordinal_labels, dataset = prepdata.get_ordinal_encoded_df(dataset)
@@ -127,7 +126,7 @@ def preprocess(dataset,
         col_labels.update(encoded_labels)
     elif str.lower(tranform_categorical) == 'one_hot_encoding':
         categorical_dataset, _ = prepdata.get_ohe_df(categorical_dataset, ignore_cols=ohe_ignore_cols,
-                                                  categorical_threshold=categorical_threshold)
+                                                     categorical_threshold=categorical_threshold)
         for col in ohe_ignore_cols:
             if helper.check_numeric_col(categorical_dataset[col]):
                 pass
@@ -187,7 +186,7 @@ def scale_transform(dataset,
     mimmax: Fits values to a range around 0 to 1
     robust: Scaling data with outliers
     maxabs: Handling sparse data
-    
+
     """
     if summary_dict is None:
         summary_dict = dataset.describe().to_dict()
@@ -196,15 +195,19 @@ def scale_transform(dataset,
             summary_dict[col]['median'] = median
     for col in dataset:
         if str.lower(method) == 'minmax':
-            dataset[col] = (dataset[col] - summary_dict[col]['min']) / (summary_dict[col]['max'] - summary_dict[col]['min'])
-        if str.lower(method) == 'average':
-            dataset[col] = (dataset[col] - summary_dict[col]['mean']) / (summary_dict[col]['max'] - summary_dict[col]['min'])
+            dataset[col] = (dataset[col] - summary_dict[col]['min']) / (
+                        summary_dict[col]['max'] - summary_dict[col]['min'])
+        elif str.lower(method) == 'average':
+            dataset[col] = (dataset[col] - summary_dict[col]['mean']) / (
+                        summary_dict[col]['max'] - summary_dict[col]['min'])
         elif str.lower(method) == 'standard':
             dataset[col] = (dataset[col] - summary_dict[col]['mean']) / summary_dict[col]['std']
         elif str.lower(method) == 'robust':
-            dataset[col] = (dataset[col] - summary_dict[col]['median']) / (summary_dict[col]['75%'] - summary_dict[col]['25%'])
+            dataset[col] = (dataset[col] - summary_dict[col]['median']) / (
+                        summary_dict[col]['75%'] - summary_dict[col]['25%'])
         elif str.lower(method) == 'maxabs':
-            dataset[col] = dataset[col] / max([helper.get_absolute(summary_dict[col]['min']), helper.get_absolute(summary_dict[col]['max'])])
+            dataset[col] = dataset[col] / max(
+                [helper.get_absolute(summary_dict[col]['min']), helper.get_absolute(summary_dict[col]['max'])])
     return dataset, summary_dict
 
 
@@ -243,7 +246,7 @@ def master_correlation(dataset,
             nominal_cols.append(target_column)
         elif target_type == 'ordinal' and target_column not in ordinal_cols:
             ordinal_cols.append(target_column)
-    dataset = prepdata.drop_single_valued_cols(dataset)
+    dataset, _ = prepdata.drop_single_valued_cols(dataset)
     for col in dataset:
         if col not in nominal_cols + ordinal_cols + continuous_cols:
             if helper.check_categorical_col(dataset[col], categorical_threshold=categorical_threshold):
@@ -321,7 +324,7 @@ def feature_selection(dataset,
                                      define_nominal_cols=define_nominal_cols, define_ordinal_cols=define_ordinal_cols,
                                      categorical_threshold=categorical_threshold, impute_nulls=impute_nulls,
                                      only_target=True, target_column=target_column, target_type=target_type)
-    corr_dict = corr_df[target_column].to_dict()
+    corr_dict = corr_df[target_column].sort_values(ascending=False).to_dict()
     if correlation_threshold is None:
         correlation_threshold = helper.correlation_threshold(dataset.shape[0])
     selected_features = []
@@ -329,11 +332,12 @@ def feature_selection(dataset,
         if helper.get_absolute(corr_dict[col]) >= correlation_threshold:
             selected_features.append(col)
     if select_top is not None:
-        selected_features = selected_features[:select_top]
+        selected_features = selected_features[:select_top+1]
     return selected_features, corr_df
 
 
 class Preprocessor:
+    use_artifact = False
     impute_null_method = 'central_tendency'
     tranform_categorical = 'label_encoding'
     categorical_threshold = 0.3
@@ -421,6 +425,16 @@ class Preprocessor:
     def set_scale_transform(self, method):
         self.scaling_method = method
 
+    def set_artifact(self, artifact=None, artifact_file=None):
+        self.use_artifact = True
+        if artifact is None and artifact_file is None:
+            raise exceptions.ParameterError("Please pass either 'artifact' or 'artifact_path' as parameters")
+        else:
+            if artifact is not None:
+                self.artifact = artifact
+            elif artifact_file is not None:
+                self.artifact = helper.load_artifact(artifact_file)
+
     def get_preprocessor_artifact(self, file_name=None):
         if file_name is not None:
             json_str = json.dumps(eval(str(self.artifact)))
@@ -433,188 +447,269 @@ class Preprocessor:
         return self.col_labels
 
     def get_processed_dataset(self):
-        if str.lower(self.learning_type) not in ['supervised', 'unsupervised']:
-            raise exceptions.ParameterError('learning_type should be supervised/unsupervised')
-        if str.lower(self.tranform_categorical) not in ['label_encoding', 'one_hot_encoding']:
-            raise exceptions.ParameterError('tranform_categorical should be label_encoding/one_hot_encoding')
-        if str.lower(self.learning_type) == 'supervised' and self.target_variable is None:
-            raise exceptions.ParameterError('target_variable is a required parameter for supervised learning')
-        if str.lower(self.learning_type) == 'supervised' and self.target_type is None:
-            raise exceptions.ParameterError(
-                'target_type (continuous/categorical) is a required parameter for supervised learning')
+        if not self.use_artifact:
+            if str.lower(self.learning_type) not in ['supervised', 'unsupervised']:
+                raise exceptions.ParameterError('learning_type should be supervised/unsupervised')
+            if str.lower(self.tranform_categorical) not in ['label_encoding', 'one_hot_encoding']:
+                raise exceptions.ParameterError('tranform_categorical should be label_encoding/one_hot_encoding')
+            if str.lower(self.learning_type) == 'supervised' and self.target_variable is None:
+                raise exceptions.ParameterError('target_variable is a required parameter for supervised learning')
+            if str.lower(self.learning_type) == 'supervised' and self.target_type is None:
+                raise exceptions.ParameterError(
+                    'target_type (continuous/categorical) is a required parameter for supervised learning')
 
-        # resetting the index of the dataset
-        self.dataset = self.dataset.reset_index(drop=True)
+            # resetting the index of the dataset
+            self.dataset = self.dataset.reset_index(drop=True)
 
-        # will be execute if derive_from_datetime is True
-        if self.derive_columns_from_datetime:
-            self.dataset, columns = prepdata.derive_from_datetime(self.dataset)
-            self.artifact['derive_from_datetime'] = columns
+            # will be execute if derive_from_datetime is True
+            if self.derive_columns_from_datetime:
+                self.dataset, columns = prepdata.derive_from_datetime(self.dataset)
+                self.artifact['derive_from_datetime'] = columns
 
-        # remove null dominated fields based on threshold if the flag is true
-        if self.drop_null_dominated:
-            self.dataset, columns = prepdata.drop_null_fields(self.dataset, dropna_threshold=self.dropna_threshold)
+            # remove null dominated fields based on threshold if the flag is true
+            if self.drop_null_dominated:
+                self.dataset, columns = prepdata.drop_null_fields(self.dataset, dropna_threshold=self.dropna_threshold)
 
-        self.artifact['null_dominated_columns'] = columns
+            self.artifact['null_dominated_columns'] = columns
 
-        self.dataset = helper.bool_to_int(self.dataset)
+            self.dataset = helper.bool_to_int(self.dataset)
 
-        # drop all single valued columns
-        self.dataset = prepdata.drop_single_valued_cols(self.dataset)
+            # drop all single valued columns
+            self.dataset, single_valued_cols = prepdata.drop_single_valued_cols(self.dataset)
 
-        # transform ordinal columns to integer values
-        ordinal_labels, self.dataset = prepdata.get_ordinal_encoded_df(self.dataset,
-                                                                       custom_ordinal_dict=self.ordinal_dict)
-        self.col_labels.update(ordinal_labels)
-        self.ordinal_cols.extend([col for col in ordinal_labels.keys() if col != self.target_variable])
+            # transform ordinal columns to integer values
+            ordinal_labels, self.dataset = prepdata.get_ordinal_encoded_df(self.dataset,
+                                                                           custom_ordinal_dict=self.ordinal_dict)
+            self.col_labels.update(ordinal_labels)
+            self.ordinal_cols.extend([col for col in ordinal_labels.keys() if col != self.target_variable])
 
-        for col in self.dataset:
-            if col != self.target_variable and col not in self.ordinal_cols + self.nominal_cols + self.continuous_cols:
-                if helper.check_categorical_col(self.dataset[col], categorical_threshold=self.categorical_threshold):
-                    self.nominal_cols.append(col)
-                elif helper.check_numeric_col(self.dataset[col]):
-                    self.continuous_cols.append(col)
+            for col in self.dataset:
+                if col != self.target_variable and col not in self.ordinal_cols + self.nominal_cols + self.continuous_cols:
+                    if helper.check_categorical_col(self.dataset[col],
+                                                    categorical_threshold=self.categorical_threshold):
+                        self.nominal_cols.append(col)
+                    elif helper.check_numeric_col(self.dataset[col]):
+                        self.continuous_cols.append(col)
 
-        if str.lower(self.target_type) == 'continuous':
-            self.continuous_cols.append(self.target_variable)
-        elif str.lower(self.target_type) == 'categorical':
-            if self.target_variable not in self.ordinal_cols:
-                self.nominal_cols.append(self.target_variable)
+            if str.lower(self.target_type) == 'continuous':
+                self.continuous_cols.append(self.target_variable)
+            elif str.lower(self.target_type) == 'categorical':
+                if self.target_variable not in self.ordinal_cols:
+                    self.nominal_cols.append(self.target_variable)
 
-        self.ordinal_cols = list(set(self.ordinal_cols))
-        self.nominal_cols = list(set(self.nominal_cols))
-        self.continuous_cols = list(set(self.continuous_cols))
+            self.ordinal_cols = list(set(self.ordinal_cols))
+            self.nominal_cols = list(set(self.nominal_cols))
+            self.continuous_cols = list(set(self.continuous_cols))
 
-        print('Columns identified as ordinal are ' + ','.join(self.ordinal_cols))
-        print('Columns identified as nominal are ' + ','.join(self.nominal_cols))
-        print('Columns identified as continuous are ' + ','.join(self.continuous_cols))
+            print('Columns identified as ordinal are ' + ','.join(self.ordinal_cols))
+            print('Columns identified as nominal are ' + ','.join(self.nominal_cols))
+            print('Columns identified as continuous are ' + ','.join(self.continuous_cols))
 
-        self.dataset = self.dataset[self.ordinal_cols + self.nominal_cols + self.continuous_cols]
+            self.dataset = self.dataset[self.ordinal_cols + self.nominal_cols + self.continuous_cols]
 
-        summary_dict = prepdata.dataset_summary(
-            self.dataset[self.continuous_cols + self.ordinal_cols + self.nominal_cols],
-            define_continuous_cols=self.continuous_cols,
-            define_nominal_cols=self.nominal_cols,
-            define_ordinal_cols=self.ordinal_cols,
-            categorical_threshold=self.categorical_threshold)
-        self.dataset_summary.update(summary_dict)
-        print(self.dataset_summary)
+            summary_dict = prepdata.dataset_summary(
+                self.dataset[self.continuous_cols + self.ordinal_cols + self.nominal_cols],
+                define_continuous_cols=self.continuous_cols,
+                define_nominal_cols=self.nominal_cols,
+                define_ordinal_cols=self.ordinal_cols,
+                categorical_threshold=self.categorical_threshold)
+            self.dataset_summary.update(summary_dict)
+            print(self.dataset_summary)
 
-        if str.lower(self.tranform_categorical) == 'label_encoding':
-            labels, self.dataset = prepdata.get_label_encoded_df(self.dataset,
-                                                                 categorical_threshold=self.categorical_threshold,
-                                                                 define_nominal_cols=self.nominal_cols,
-                                                                 ignore_cols=self.ordinal_cols + self.continuous_cols)
-            self.col_labels.update(labels)
-        elif str.lower(self.tranform_categorical) == 'one_hot_encoding':
-            self.dataset, columns = prepdata.get_ohe_df(self.dataset,
-                                                        target_variable=self.target_variable,
-                                                        define_nominal_cols=self.nominal_cols,
-                                                        ignore_cols=self.ohe_ignore_cols + self.ordinal_cols + self.continuous_cols + [
-                                                            self.target_variable],
-                                                        categorical_threshold=self.categorical_threshold,
-                                                        drop_first=self.ohe_drop_first)
-            self.artifact['one_hot_encoding'] = columns
-
-            for col in columns:
-                self.nominal_cols.remove(col)
-
-            for col in self.dataset.columns:
-                if col not in self.ordinal_cols + self.continuous_cols + self.nominal_cols:
-                    self.ordinal_cols.append(col)
-
-            if len(self.ohe_ignore_cols) > 0:
+            if str.lower(self.tranform_categorical) == 'label_encoding':
                 labels, self.dataset = prepdata.get_label_encoded_df(self.dataset,
                                                                      categorical_threshold=self.categorical_threshold,
-                                                                     define_nominal_cols=self.ohe_ignore_cols,
+                                                                     define_nominal_cols=self.nominal_cols,
                                                                      ignore_cols=self.ordinal_cols + self.continuous_cols)
                 self.col_labels.update(labels)
+            elif str.lower(self.tranform_categorical) == 'one_hot_encoding':
+                self.dataset, columns = prepdata.get_ohe_df(self.dataset,
+                                                            target_variable=self.target_variable,
+                                                            define_nominal_cols=self.nominal_cols,
+                                                            ignore_cols=self.ohe_ignore_cols + self.ordinal_cols + self.continuous_cols + [
+                                                                self.target_variable],
+                                                            categorical_threshold=self.categorical_threshold,
+                                                            drop_first=self.ohe_drop_first)
+                self.artifact['one_hot_encoding'] = columns
 
-        self.artifact['labels'] = self.col_labels
+                for col in columns:
+                    self.nominal_cols.remove(col)
 
-        self.dataset = prepdata.impute_nulls(self.dataset,
-                                             method=self.impute_null_method,
-                                             define_continuous_cols=self.continuous_cols,
-                                             define_nominal_cols=self.nominal_cols,
-                                             define_ordinal_cols=self.ordinal_cols,
-                                             categorical_threshold=self.categorical_threshold)
+                for col in self.dataset.columns:
+                    if col not in self.ordinal_cols + self.continuous_cols + self.nominal_cols:
+                        self.ordinal_cols.append(col)
 
-        if self.log_transform is not None:
-            self.dataset = prepdata.log_transform(self.dataset, method=self.log_transform,
-                                                  categorical_threshold=self.categorical_threshold,
+                if len(self.ohe_ignore_cols) > 0:
+                    labels, self.dataset = prepdata.get_label_encoded_df(self.dataset,
+                                                                         categorical_threshold=self.categorical_threshold,
+                                                                         define_nominal_cols=self.ohe_ignore_cols,
+                                                                         ignore_cols=self.ordinal_cols + self.continuous_cols)
+                    self.col_labels.update(labels)
+
+            self.artifact['labels'] = self.col_labels
+
+            self.dataset = prepdata.impute_nulls(self.dataset,
+                                                 method=self.impute_null_method,
+                                                 define_continuous_cols=self.continuous_cols,
+                                                 define_nominal_cols=self.nominal_cols,
+                                                 define_ordinal_cols=self.ordinal_cols,
+                                                 categorical_threshold=self.categorical_threshold)
+
+            self.dataset, removed_cols = prepdata.drop_single_valued_cols(self.dataset)
+            single_valued_cols.extend(removed_cols)
+            self.artifact['single_valued_cols'] = single_valued_cols
+            self.nominal_cols = helper.difference(self.nominal_cols, removed_cols)
+            self.ordinal_cols = helper.difference(self.ordinal_cols, removed_cols)
+            self.continuous_cols = helper.difference(self.continuous_cols, removed_cols)
+
+            if self.log_transform is not None:
+                self.dataset = prepdata.log_transform(self.dataset, method=self.log_transform,
+                                                      categorical_threshold=self.categorical_threshold,
+                                                      define_continuous_cols=self.continuous_cols,
+                                                      ignore_cols=self.ordinal_cols + self.nominal_cols + [
+                                                          self.target_variable])
+
+            # remove outliers if opted
+            if self.remove_outliers:
+                self.dataset = prepdata.auto_remove_outliers(self.dataset,
+                                                             ignore_cols=[
+                                                                             self.target_variable] + self.ordinal_cols + self.nominal_cols,
+                                                             categorical_threshold=self.categorical_threshold,
+                                                             define_continuous_cols=self.continuous_cols)
+
+            if self.check_master_correlation:
+                self.corr_df = master_correlation(self.dataset,
                                                   define_continuous_cols=self.continuous_cols,
-                                                  ignore_cols=self.ordinal_cols + self.nominal_cols + [
-                                                      self.target_variable])
+                                                  define_nominal_cols=self.nominal_cols,
+                                                  define_ordinal_cols=self.ordinal_cols,
+                                                  categorical_threshold=self.categorical_threshold,
+                                                  impute_nulls=False)
 
-        # remove outliers if opted
-        if self.remove_outliers:
-            self.dataset = prepdata.auto_remove_outliers(self.dataset,
-                                                         ignore_cols=[
-                                                                         self.target_variable] + self.ordinal_cols + self.nominal_cols,
-                                                         categorical_threshold=self.categorical_threshold,
-                                                         define_continuous_cols=self.continuous_cols)
-        if self.multicollinearity_check:
-            if self.multicollinearity_threshold is None:
-                self.multicollinearity_threshold = helper.collinearity_threshold(self.dataset.shape[0])
-            self.corr_df = master_correlation(self.dataset,
-                                              define_continuous_cols=self.continuous_cols,
-                                              define_nominal_cols=self.nominal_cols,
-                                              define_ordinal_cols=self.ordinal_cols,
-                                              categorical_threshold=self.categorical_threshold,
-                                              impute_nulls=False)
-            prepdata.get_multicollinearity_removals(self.corr_df, self.target_variable, threshold= self.multicollinearity_threshold)
+            # does feature selection for supervised learning if opted
+            if self.do_feature_selection:
+                if self.feature_selection_threshold is None:
+                    self.feature_selection_threshold = helper.correlation_threshold(self.dataset.shape[0])
+                correlated_features, self.corr_df = feature_selection(self.dataset,
+                                                                      correlation_threshold=self.feature_selection_threshold,
+                                                                      select_top=self.feature_selection_top,
+                                                                      define_continuous_cols=self.continuous_cols,
+                                                                      define_nominal_cols=self.nominal_cols,
+                                                                      define_ordinal_cols=self.ordinal_cols,
+                                                                      categorical_threshold=self.categorical_threshold,
+                                                                      impute_nulls=False,
+                                                                      target_column=self.target_variable,
+                                                                      target_type=self.target_type,
+                                                                      corr_df=self.corr_df)
+                selected_features = correlated_features
+                self.dataset = self.dataset[selected_features]
+            else:
+                selected_features = list(self.dataset.columns)
+            self.artifact['selected_features'] = selected_features
 
-        # does feature selection for supervised learning if opted
-        if self.do_feature_selection:
-            if self.feature_selection_threshold is None:
-                self.feature_selection_threshold = helper.correlation_threshold(self.dataset.shape[0])
-            correlated_features, self.corr_df = feature_selection(self.dataset,
-                                                                  correlation_threshold=self.feature_selection_threshold,
-                                                                  select_top=self.feature_selection_top,
-                                                                  define_continuous_cols=self.continuous_cols,
-                                                                  define_nominal_cols=self.nominal_cols,
-                                                                  define_ordinal_cols=self.ordinal_cols,
-                                                                  categorical_threshold=self.categorical_threshold,
-                                                                  impute_nulls=False,
-                                                                  target_column=self.target_variable,
-                                                                  target_type=self.target_type,
-                                                                  corr_df=self.corr_df)
-            selected_features = correlated_features
-            self.dataset = self.dataset[selected_features]
+            if self.multicollinearity_check:
+                if self.multicollinearity_threshold is None:
+                    self.multicollinearity_threshold = helper.collinearity_threshold(self.dataset.shape[0])
+                self.corr_df = master_correlation(self.dataset,
+                                                  define_continuous_cols=self.continuous_cols,
+                                                  define_nominal_cols=self.nominal_cols,
+                                                  define_ordinal_cols=self.ordinal_cols,
+                                                  categorical_threshold=self.categorical_threshold,
+                                                  impute_nulls=False)
+                remove_columns = prepdata.get_multicollinearity_removals(self.corr_df, self.target_variable,
+                                                                         threshold=self.multicollinearity_threshold)
+                self.artifact['multicollinearity_check'] = self.multicollinearity_check
+                self.dataset = self.dataset.drop(remove_columns, axis=1)
+
+            if self.scaling_method is not None:
+                self.dataset, summary = scale_transform(self.dataset, self.scaling_method)
+                self.artifact['scaling_summary'] = summary
+
+            final_features = list(self.dataset.columns)
+            self.artifact['final_features'] = final_features
+
+            self.artifact['multicollinearity_check'] = self.multicollinearity_check
+            self.artifact['multicollinearity_threshold'] = self.multicollinearity_threshold
+            self.artifact['scaling_method'] = self.scaling_method
+            self.artifact['impute_null_method'] = self.impute_null_method
+            self.artifact['tranform_categorical'] = self.tranform_categorical
+            self.artifact['categorical_threshold'] = self.categorical_threshold
+            self.artifact['remove_outliers'] = self.remove_outliers
+            self.artifact['log_transform'] = self.log_transform
+            self.artifact['drop_null_dominated'] = self.drop_null_dominated
+            self.artifact['dropna_threshold'] = self.dropna_threshold
+            self.artifact['derive_columns_from_datetime'] = self.derive_columns_from_datetime
+            self.artifact['ohe_ignore_cols'] = self.ohe_ignore_cols
+            self.artifact['ohe_drop_first'] = self.ohe_drop_first
+            self.artifact['do_feature_selection'] = self.do_feature_selection
+            self.artifact['ordinal_dict'] = self.ordinal_dict
+            self.artifact['col_labels'] = self.col_labels
+            self.artifact['feature_selection_threshold'] = self.feature_selection_threshold
+            self.artifact['feature_selection_top'] = self.feature_selection_top
+            self.artifact['check_master_correlation'] = self.check_master_correlation
+            self.artifact['handle_outlier_ignore_cols'] = self.handle_outlier_ignore_cols
+            self.artifact['ordinal_cols'] = self.ordinal_cols
+            self.artifact['nominal_cols'] = self.nominal_cols
+            self.artifact['continuous_cols'] = self.continuous_cols
+            self.artifact['dataset_summary'] = self.dataset_summary
+
+            return self.dataset
+
         else:
-            selected_features = list(self.dataset.columns)
-        self.artifact['selected_features'] = selected_features
+            # USING ARTIFACT
 
-        if self.scaling_method is not None:
-            self.dataset, summary = scale_transform(self.dataset, self.scaling_method)
-            self.artifact['scaling_summary'] = summary
+            self.dataset = self.dataset.reset_index(drop=True)
 
-        self.artifact['multicollinearity_check'] = self.multicollinearity_check
-        self.artifact['multicollinearity_threshold'] = self.multicollinearity_threshold
-        self.artifact['scaling_method'] = self.scaling_method
-        self.artifact['impute_null_method'] = self.impute_null_method
-        self.artifact['tranform_categorical'] = self.tranform_categorical
-        self.artifact['categorical_threshold'] = self.categorical_threshold
-        self.artifact['remove_outliers'] = self.remove_outliers
-        self.artifact['log_transform'] = self.log_transform
-        self.artifact['drop_null_dominated'] = self.drop_null_dominated
-        self.artifact['dropna_threshold'] = self.dropna_threshold
-        self.artifact['derive_columns_from_datetime'] = self.derive_columns_from_datetime
-        self.artifact['ohe_ignore_cols'] = self.ohe_ignore_cols
-        self.artifact['ohe_drop_first'] = self.ohe_drop_first
-        self.artifact['do_feature_selection'] = self.do_feature_selection
-        self.artifact['ordinal_dict'] = self.ordinal_dict
-        self.artifact['col_labels'] = self.col_labels
-        self.artifact['feature_selection_threshold'] = self.feature_selection_threshold
-        self.artifact['feature_selection_top'] = self.feature_selection_top
-        self.artifact['check_master_correlation'] = self.check_master_correlation
-        self.artifact['handle_outlier_ignore_cols'] = self.handle_outlier_ignore_cols
-        self.artifact['ordinal_cols'] = self.ordinal_cols
-        self.artifact['nominal_cols'] = self.nominal_cols
-        self.artifact['continuous_cols'] = self.continuous_cols
-        self.artifact['dataset_summary'] = self.dataset_summary
+            datetime_cols = set()
+            for datetime_col in self.artifact['derive_from_datetime']:
+                for col in self.artifact['final_features']:
+                    if datetime_col in col:
+                        datetime_cols.add(datetime_col)
 
-        return self.dataset
+            ohe_cols = set()
+            for ohe_col in self.artifact['one_hot_encoding']:
+                for col in self.artifact['final_features']:
+                    if ohe_col in col:
+                        ohe_cols.add(ohe_col)
+            ohe_cols = list(ohe_cols)
+
+            self.dataset, _ = prepdata.derive_from_datetime(self.dataset, specify_columns=datetime_cols)
+
+            _, self.dataset = prepdata.get_ordinal_encoded_df(self.dataset,
+                                                              custom_ordinal_dict=self.artifact['col_labels'])
+
+            self.dataset = helper.bool_to_int(self.dataset)
+
+            for col in self.dataset.columns:
+                if col in ohe_cols+self.artifact['final_features']:
+                    summary = self.artifact['dataset_summary'][col]
+                    if col in self.artifact['nominal_cols']:
+                        self.dataset[col].fillna(summary['mode'])
+                    elif col in self.artifact['ordinal_cols']:
+                        self.dataset[col].fillna(summary['mode'])
+                    elif col in self.artifact['continuous_cols']:
+                        if summary['Skewed'] == "Y":
+                            self.dataset[col].fillna(summary['median'])
+                            if col != self.target_variable:
+                                if self.artifact['log_transform'] == 'yeojohnson':
+                                    self.dataset[col] = self.dataset[col].apply(lambda x: helper.yeojohnsonlog(x))
+                                elif self.artifact['log_transform'] == 'added_constant':
+                                    dataset = helper.added_constant_log(dataset, col, min_value=summary['min'])
+                        else:
+                            self.dataset[col].fillna(summary['mean'])
+
+            self.dataset = helper.one_hot_encoding(self.dataset, ohe_cols)
+
+            for col in self.artifact['final_features']:
+                if col not in self.dataset.columns:
+                    if col in self.artifact['ordinal_cols']:
+                        self.dataset[col] = 0
+
+            self.dataset = self.dataset[self.artifact['final_features']]
+
+            if self.artifact['scaling_method'] is not None:
+                self.dataset, _ = scale_transform(self.dataset, method=self.artifact['scaling_method'], summary_dict=self.artifact['scaling_summary'])
+
+            return self.dataset
 
     def get_master_correlation(self):
         return self.corr_df
