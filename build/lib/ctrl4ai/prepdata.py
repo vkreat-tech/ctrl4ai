@@ -243,9 +243,8 @@ def label_encode(dataset,
     mode_val = dataset[col].mode()[0]
     dataset[col] = dataset[col].fillna(mode_val)
     label_dict = dict(zip(dataset[col].unique(), np.arange(dataset[col].unique().shape[0])))
-    dataset = dataset.replace({col: label_dict})
-    dataset[col] = dataset[col].astype('int')
-    dataset[col] = dataset[col].astype('category')
+    # dataset = dataset.replace({col: label_dict})
+    dataset[col] = dataset[col].astype(str).map(label_dict)
     return label_dict, dataset
 
 

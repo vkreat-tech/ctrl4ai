@@ -522,6 +522,7 @@ class Preprocessor:
                                                                      define_nominal_cols=self.nominal_cols,
                                                                      ignore_cols=self.ordinal_cols + self.continuous_cols)
                 self.col_labels.update(labels)
+                self.artifact['one_hot_encoding'] = []
             elif str.lower(self.tranform_categorical) == 'one_hot_encoding':
                 self.dataset, columns = prepdata.get_ohe_df(self.dataset,
                                                             target_variable=self.target_variable,
@@ -674,8 +675,7 @@ class Preprocessor:
 
             self.dataset, _ = prepdata.derive_from_datetime(self.dataset, specify_columns=datetime_cols)
 
-            _, self.dataset = prepdata.get_ordinal_encoded_df(self.dataset,
-                                                              custom_ordinal_dict=self.artifact['col_labels'])
+            _, self.dataset = prepdata.get_ordinal_encoded_df(self.dataset, custom_ordinal_dict=self.artifact['col_labels'])
 
             self.dataset = helper.bool_to_int(self.dataset)
 
@@ -697,7 +697,8 @@ class Preprocessor:
                         else:
                             self.dataset[col].fillna(summary['mean'])
 
-            self.dataset = helper.one_hot_encoding(self.dataset, ohe_cols)
+            if len(ohe_cols) > 0:
+                self.dataset = helper.one_hot_encoding(self.dataset, ohe_cols)
 
             for col in self.artifact['final_features']:
                 if col not in self.dataset.columns:
