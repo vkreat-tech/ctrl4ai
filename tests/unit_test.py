@@ -18,7 +18,7 @@ class TestingError(Exception):
 
 
 df1 = datasets.trip_fare()
-df1 = df1.head(10000)
+# df1 = df1.head(10000)
 
 dfs, _ = prepdata.split_dataset(df1, n_splits=2, proportion=[0.7, 0.3], shuffle=True)
 

@@ -510,7 +510,7 @@ def get_multicollinearity_removals(corr_df, target_variable, threshold=0.7):
                 cols = item[0]
                 if target_variable not in cols:
                     if len(helper.intersection(cols, remove_list)) == 0:
-                        if cols[0] < cols[1]:
+                        if tgt_corr[cols[0]] < tgt_corr[cols[1]]:
                             remove_list.append(cols[0])
                         else:
                             remove_list.append(cols[1])

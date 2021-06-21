@@ -11,6 +11,7 @@ from . import exceptions
 
 import json
 import pandas as pd
+import numpy as np
 from itertools import combinations
 
 pd.set_option('mode.chained_assignment', None)
@@ -196,15 +197,15 @@ def scale_transform(dataset,
     for col in dataset:
         if str.lower(method) == 'minmax':
             dataset[col] = (dataset[col] - summary_dict[col]['min']) / (
-                        summary_dict[col]['max'] - summary_dict[col]['min'])
+                    summary_dict[col]['max'] - summary_dict[col]['min'])
         elif str.lower(method) == 'average':
             dataset[col] = (dataset[col] - summary_dict[col]['mean']) / (
-                        summary_dict[col]['max'] - summary_dict[col]['min'])
+                    summary_dict[col]['max'] - summary_dict[col]['min'])
         elif str.lower(method) == 'standard':
             dataset[col] = (dataset[col] - summary_dict[col]['mean']) / summary_dict[col]['std']
         elif str.lower(method) == 'robust':
             dataset[col] = (dataset[col] - summary_dict[col]['median']) / (
-                        summary_dict[col]['75%'] - summary_dict[col]['25%'])
+                    summary_dict[col]['75%'] - summary_dict[col]['25%'])
         elif str.lower(method) == 'maxabs':
             dataset[col] = dataset[col] / max(
                 [helper.get_absolute(summary_dict[col]['min']), helper.get_absolute(summary_dict[col]['max'])])
@@ -332,7 +333,7 @@ def feature_selection(dataset,
         if helper.get_absolute(corr_dict[col]) >= correlation_threshold:
             selected_features.append(col)
     if select_top is not None:
-        selected_features = selected_features[:select_top+1]
+        selected_features = selected_features[:select_top + 1]
     return selected_features, corr_df
 
 
@@ -370,10 +371,40 @@ class Preprocessor:
                  learning_type,
                  target_variable=None,
                  target_type=None, ):
+        self.reset()
         self.dataset = dataset
         self.learning_type = learning_type
         self.target_variable = target_variable
         self.target_type = target_type
+
+    def reset(self):
+        self.use_artifact = False
+        self.impute_null_method = 'central_tendency'
+        self.tranform_categorical = 'label_encoding'
+        self.categorical_threshold = 0.3
+        self.remove_outliers = False
+        self.log_transform = None
+        self.drop_null_dominated = True
+        self.dropna_threshold = 0.7
+        self.derive_columns_from_datetime = True
+        self.ohe_ignore_cols = []
+        self.ohe_drop_first = True
+        self.do_feature_selection = True
+        self.ordinal_dict = dict()
+        self.artifact = dict()
+        self.col_labels = dict()
+        self.feature_selection_threshold = None
+        self.feature_selection_top = None
+        self.check_master_correlation = False
+        self.handle_outlier_ignore_cols = []
+        self.ordinal_cols = []
+        self.nominal_cols = []
+        self.continuous_cols = []
+        self.dataset_summary = dict()
+        self.corr_df = None
+        self.scaling_method = None
+        self.multicollinearity_check = False
+        self.multicollinearity_threshold = None
 
     def set_impute_null_method(self, impute_null_method):
         self.impute_null_method = impute_null_method
@@ -457,6 +488,10 @@ class Preprocessor:
             if str.lower(self.learning_type) == 'supervised' and self.target_type is None:
                 raise exceptions.ParameterError(
                     'target_type (continuous/categorical) is a required parameter for supervised learning')
+
+            self.artifact['learning_type'] = self.learning_type
+            self.artifact['target_variable'] = self.target_variable
+            self.artifact['target_type'] = self.target_type
 
             # resetting the index of the dataset
             self.dataset = self.dataset.reset_index(drop=True)
@@ -610,15 +645,9 @@ class Preprocessor:
             if self.multicollinearity_check:
                 if self.multicollinearity_threshold is None:
                     self.multicollinearity_threshold = helper.collinearity_threshold(self.dataset.shape[0])
-                self.corr_df = master_correlation(self.dataset,
-                                                  define_continuous_cols=self.continuous_cols,
-                                                  define_nominal_cols=self.nominal_cols,
-                                                  define_ordinal_cols=self.ordinal_cols,
-                                                  categorical_threshold=self.categorical_threshold,
-                                                  impute_nulls=False)
                 remove_columns = prepdata.get_multicollinearity_removals(self.corr_df, self.target_variable,
                                                                          threshold=self.multicollinearity_threshold)
-                self.artifact['multicollinearity_check'] = self.multicollinearity_check
+                self.artifact['multicollinearity_removal'] = remove_columns
                 self.dataset = self.dataset.drop(remove_columns, axis=1)
 
             if self.scaling_method is not None:
@@ -675,12 +704,13 @@ class Preprocessor:
 
             self.dataset, _ = prepdata.derive_from_datetime(self.dataset, specify_columns=datetime_cols)
 
-            _, self.dataset = prepdata.get_ordinal_encoded_df(self.dataset, custom_ordinal_dict=self.artifact['col_labels'])
+            _, self.dataset = prepdata.get_ordinal_encoded_df(self.dataset,
+                                                              custom_ordinal_dict=self.artifact['col_labels'])
 
             self.dataset = helper.bool_to_int(self.dataset)
 
             for col in self.dataset.columns:
-                if col in ohe_cols+self.artifact['final_features']:
+                if col in ohe_cols + self.artifact['final_features']:
                     summary = self.artifact['dataset_summary'][col]
                     if col in self.artifact['nominal_cols']:
                         self.dataset[col].fillna(summary['mode'])
@@ -708,9 +738,37 @@ class Preprocessor:
             self.dataset = self.dataset[self.artifact['final_features']]
 
             if self.artifact['scaling_method'] is not None:
-                self.dataset, _ = scale_transform(self.dataset, method=self.artifact['scaling_method'], summary_dict=self.artifact['scaling_summary'])
+                self.dataset, _ = scale_transform(self.dataset, method=self.artifact['scaling_method'],
+                                                  summary_dict=self.artifact['scaling_summary'])
 
             return self.dataset
 
     def get_master_correlation(self):
         return self.corr_df
+
+
+def probability_to_class(predict_proba_output, threshold_dict=None):
+    outcomes = [*range(predict_proba_output.shape[1])]
+    if threshold_dict is None:
+        threshold_dict = dict.fromkeys(outcomes[1:], 0.5)
+    if len(threshold_dict) != predict_proba_output.shape[1] - 1:
+        raise exceptions.ParameterError('threshold_dict has ' + str(len(threshold_dict)) + ' values. Expected ' + str(
+            predict_proba_output.shape[1] - 1))
+    if not all(x in outcomes for x in threshold_dict.keys()):
+        raise exceptions.ParameterError('The keys in threshold_dict should be a subset of ' + str(outcomes))
+    if not all(0 <= x <= 1 for x in threshold_dict.values()):
+        raise exceptions.ParameterError(
+            'The values in threshold_dict should have values between 0 and 1 (both inclusive)')
+    left_outcome = helper.difference(outcomes, threshold_dict.keys())[0]
+
+    def process(arr):
+        res = left_outcome
+        ix = threshold_dict.keys()
+        for i in ix:
+            if arr[i] >= threshold_dict[i]:
+                res = i
+        return res
+
+    out = np.array(list(map(process, predict_proba_output)))
+    return out
+
