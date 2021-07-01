@@ -154,7 +154,7 @@ def get_ohe_df(dataset,
         if col in nominal_cols and col not in ignore_cols:
             print('One hot encoding ' + col)
             columns.append(col)
-            dataset = helper.one_hot_encoding(dataset, [col], drop_first=drop_first)
+    dataset = helper.one_hot_encoding(dataset, columns, drop_first=drop_first)
     return dataset, columns
 
 
@@ -354,6 +354,8 @@ def cramersv_corr(x, y):
     phi2corr = max(0, phi2 - ((k - 1) * (r - 1)) / (n - 1))
     rcorr = r - ((r - 1) ** 2) / (n - 1)
     kcorr = k - ((k - 1) ** 2) / (n - 1)
+    if rcorr == 0 or kcorr == 0:
+        return 0
     return np.sqrt(phi2corr / min((kcorr - 1), (rcorr - 1)))
 
 
@@ -498,7 +500,7 @@ def multicollinearity_check(corr_df, threshold=0.7):
     return result_set
 
 
-def get_multicollinearity_removals(corr_df, target_variable, threshold=0.7):
+def get_multicollinearity_removals(corr_df, target_variable, threshold=0.7, ignore_columns=[]):
     res = multicollinearity_check(corr_df, threshold=threshold)
     corr = list(set([helper.get_absolute(item[1]) for item in res]))
     corr.sort(reverse=True)
@@ -508,7 +510,7 @@ def get_multicollinearity_removals(corr_df, target_variable, threshold=0.7):
         for item in res:
             if helper.get_absolute(item[1]) == val:
                 cols = item[0]
-                if target_variable not in cols:
+                if target_variable not in cols and (cols[0] not in ignore_columns and cols[1] not in ignore_columns):
                     if len(helper.intersection(cols, remove_list)) == 0:
                         if tgt_corr[cols[0]] < tgt_corr[cols[1]]:
                             remove_list.append(cols[0])

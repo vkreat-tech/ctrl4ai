@@ -211,7 +211,7 @@ def freedman_diaconis(data, returnas="width"):
     else:
         datmin, datmax = data.min(), data.max()
         datrng = datmax - datmin
-        result = int((datrng / bw) + 1)
+        result = int((datrng // bw) + 1)
     return result
 
 
@@ -284,4 +284,7 @@ def load_artifact(artifact_file):
     artifact = json.loads(artifact_json)
     return artifact
 
+
+def categoric_threshold(rows):
+    return np.sqrt(rows)/rows
 

@@ -13,6 +13,7 @@ import json
 import pandas as pd
 import numpy as np
 from itertools import combinations
+import concurrent.futures
 
 pd.set_option('mode.chained_assignment', None)
 
@@ -258,9 +259,6 @@ def master_correlation(dataset,
     nominal_dataset = dataset[nominal_cols]
     ordinal_dataset = dataset[ordinal_cols]
     continuous_dataset = dataset[continuous_cols]
-    print('Columns identified as ordinal are ' + ','.join(ordinal_cols))
-    print('Columns identified as nominal are ' + ','.join(nominal_cols))
-    print('Columns identified as continuous are ' + ','.join(continuous_cols))
     _, nominal_dataset = prepdata.get_label_encoded_df(nominal_dataset)
 
     data = pd.concat([nominal_dataset, continuous_dataset, ordinal_dataset], axis=1)
@@ -277,11 +275,7 @@ def master_correlation(dataset,
     for col in column_list:
         corr_df.loc[col, col] = 1
 
-    for comb in column_combination:
-        if only_target and target_column not in comb:
-            continue
-        col1 = comb[0]
-        col2 = comb[1]
+    def sub_correlation(col1, col2):
         if col1 in continuous_cols and col2 in continuous_cols:
             corr_value1 = prepdata.pearson_corr(data[col1], data[col2])
             corr_value2 = prepdata.spearmans_corr(data[col2], data[col1])
@@ -304,6 +298,14 @@ def master_correlation(dataset,
             corr_value = prepdata.cramersv_corr(data[col1], data[col2])
         corr_df.loc[col1, col2] = corr_value
         corr_df.loc[col2, col1] = corr_value
+
+    with concurrent.futures.ThreadPoolExecutor(3) as executor:
+        for comb in column_combination:
+            if only_target and target_column not in comb:
+                continue
+            c1 = comb[0]
+            c2 = comb[1]
+            executor.submit(sub_correlation, c1, c2)
     if only_target:
         corr_df = pd.DataFrame(corr_df[target_column])
     return corr_df
@@ -341,7 +343,7 @@ class Preprocessor:
     use_artifact = False
     impute_null_method = 'central_tendency'
     tranform_categorical = 'label_encoding'
-    categorical_threshold = 0.3
+    categorical_threshold = None
     remove_outliers = False
     log_transform = None
     drop_null_dominated = True
@@ -493,6 +495,9 @@ class Preprocessor:
             self.artifact['target_variable'] = self.target_variable
             self.artifact['target_type'] = self.target_type
 
+            if self.categorical_threshold is None:
+                self.categorical_threshold = helper.categoric_threshold(self.dataset.shape[0])
+
             # resetting the index of the dataset
             self.dataset = self.dataset.reset_index(drop=True)
 
@@ -582,8 +587,6 @@ class Preprocessor:
                                                                          ignore_cols=self.ordinal_cols + self.continuous_cols)
                     self.col_labels.update(labels)
 
-            self.artifact['labels'] = self.col_labels
-
             self.dataset = prepdata.impute_nulls(self.dataset,
                                                  method=self.impute_null_method,
                                                  define_continuous_cols=self.continuous_cols,
@@ -612,6 +615,8 @@ class Preprocessor:
                                                                              self.target_variable] + self.ordinal_cols + self.nominal_cols,
                                                              categorical_threshold=self.categorical_threshold,
                                                              define_continuous_cols=self.continuous_cols)
+
+            self.artifact['initial_features'] = list(self.dataset.columns)
 
             if self.check_master_correlation:
                 self.corr_df = master_correlation(self.dataset,
@@ -646,7 +651,9 @@ class Preprocessor:
                 if self.multicollinearity_threshold is None:
                     self.multicollinearity_threshold = helper.collinearity_threshold(self.dataset.shape[0])
                 remove_columns = prepdata.get_multicollinearity_removals(self.corr_df, self.target_variable,
-                                                                         threshold=self.multicollinearity_threshold)
+                                                                         threshold=self.multicollinearity_threshold,
+                                                                         ignore_columns=helper.difference(self.artifact['initial_features'], selected_features)
+                                                                         )
                 self.artifact['multicollinearity_removal'] = remove_columns
                 self.dataset = self.dataset.drop(remove_columns, axis=1)
 

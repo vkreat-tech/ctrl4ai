@@ -18,7 +18,7 @@ class TestingError(Exception):
 
 
 df1 = datasets.trip_fare()
-# df1 = df1.head(10000)
+df1 = df1.head(10000)
 
 dfs, _ = prepdata.split_dataset(df1, n_splits=2, proportion=[0.7, 0.3], shuffle=True)
 
@@ -26,18 +26,11 @@ train = dfs[0]
 test = dfs[1]
 
 prep = automl.Preprocessor(df1, learning_type='Supervised', target_variable='fare_amount', target_type='continuous')
-prep.set_tranform_categorical('one_hot_encoding')
-prep.set_scale_transform('minmax')
-prep.set_log_transform('yeojohnson')
+#prep.set_tranform_categorical('one_hot_encoding')
+prep.set_multicollinearity_check(True)
 cleansed_dataset = prep.get_processed_dataset()
 artifact = prep.get_preprocessor_artifact(r'C:\Users\SSelvaku\Documents\Temp\artifact.json')
+print(prep.get_master_correlation())
 
-artifact = helper.load_artifact(r'C:\Users\SSelvaku\Documents\Temp\artifact.json')
 
-prep = automl.Preprocessor(test, learning_type='Supervised', target_variable='fare_amount', target_type='continuous')
-prep.set_artifact(artifact)
-
-dataset = prep.get_processed_dataset()
-print(dataset)
-# print(dataset.columns)
 
