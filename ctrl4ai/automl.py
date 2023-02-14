@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue May 19 19:00:36 2020
+About Ctrl4AI
+    Open Source Project Developed by VKreaT (www.vkreat.com)
+    Ctrl4AI (www.ctrl4ai.com) has automated methods to automate the entire flow of pre-processing
 
-@author: Shaji,Charu,Selva
+About ctrl4ai.automl
+    The module has functions the does the end-to-end flow of pre-processing
+
+Last Updated On: 14 Feb 2023
 """
 
 from . import prepdata

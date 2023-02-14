@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue May 19 19:41:40 2020
+About Ctrl4AI
+    Open Source Project Developed by VKreaT (www.vkreat.com)
+    Ctrl4AI (www.ctrl4ai.com) has automated methods to automate the entire flow of pre-processing
 
-@author: Shaji,Charu,Selva
+About ctrl4ai.datasets
+    The module has practice datasets which can used by unit tests or to practice different functionalities
+
+Last Updated On: 14 Feb 2023
 """
 
 import pandas as pd
